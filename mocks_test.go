@@ -39,6 +39,7 @@ func TestMockBackendQueryRow(t *testing.T) {
 		t.Error("expected to get the row I entered")
 	}
 }
+
 func TestNewMockRowsScanner(t *testing.T) {
 	rows := NewMockRowsScanner(nil)
 	if rows.Err() != ErrRowsScannerInvalidData {

@@ -27,6 +27,9 @@ func (b *MockBackend) Query(query string, args ...interface{}) (RowsScanner, err
 	return b.Rows, b.QueryErr
 }
 func (b *MockBackend) QueryRow(query string, args ...interface{}) RowScanner {
+	if b.QueryErr != nil {
+		return &MockRowScanner{ScanErr: b.QueryErr}
+	}
 	return b.Row
 }
 
@@ -94,7 +97,7 @@ func setValue(structVal reflect.Value, dest []interface{}) error {
 	for i, _ := range dest {
 		destination := reflect.ValueOf(dest[i]).Elem()
 		source := structVal.Field(i)
-		if destination.Type() != source.Type() {
+		if destination.Type() != source.Type() && destination.Type().Kind() != reflect.Interface {
 			return fmt.Errorf("source and destination types do not match at index: %d", i)
 		}
 		destination.Set(source)
