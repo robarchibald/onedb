@@ -1,2 +1,2 @@
-# testableDb
-A lightweight Go layer over database/sql and jackc/pgx (others easily added) to provide a simple testable DB layer that relies on interfaces instead of concrete structs for easy testability
+# OneDb
+OneDB offers a single GO access layer for SQL, LDAP, Redis, etc.  Input a query and it outputs a slice of structs or JSON
