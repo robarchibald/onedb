@@ -1,42 +1,85 @@
-package testableDb
+package onedb
 
 import (
 	"gopkg.in/jackc/pgx.v2"
 )
 
+var pgxOpen ConnPoolNewer = &PgxConnPooler{}
+
+type ConnPoolNewer interface {
+	NewConnPool(config pgx.ConnPoolConfig) (p PgxBackender, err error)
+}
+
+type PgxConnPooler struct{}
+
+func (c *PgxConnPooler) NewConnPool(config pgx.ConnPoolConfig) (p PgxBackender, err error) {
+	return pgx.NewConnPool(config)
+}
+
+type PgxBackend struct {
+	db PgxBackender
+	BackendConnecter
+}
+
+type PgxBackender interface {
+	Close()
+	Exec(query string, args ...interface{}) (pgx.CommandTag, error)
+	Query(query string, args ...interface{}) (*pgx.Rows, error)
+	QueryRow(query string, args ...interface{}) *pgx.Row
+}
+
+func NewPgxOneDB(server string, port uint16, username string, password string, database string) (OneDBer, error) {
+	conn, err := newPgxBackend(server, port, username, password, database)
+	if err != nil {
+		return nil, err
+	}
+	return NewBackendConverter(conn), nil
+}
+
 func newPgxBackend(server string, port uint16, username string, password string, database string) (BackendConnecter, error) {
 	connConfig := pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database}
 	poolConfig := pgx.ConnPoolConfig{ConnConfig: connConfig, MaxConnections: 10}
-	pgxDb, err := pgx.NewConnPool(poolConfig)
+	pgxDb, err := pgxOpen.NewConnPool(poolConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return &PgxBackend{pgxDb: pgxDb}, nil
+	return &PgxBackend{db: pgxDb}, nil
 }
 
-type PgxBackend struct {
-	pgxDb *pgx.ConnPool
-	BackendConnecter
-}
-
-func (w *PgxBackend) Close() error {
-	w.pgxDb.Close()
+func (b *PgxBackend) Close() error {
+	b.db.Close()
 	return nil
 }
 
-func (w *PgxBackend) Query(query string, args ...interface{}) (RowsScanner, error) {
-	rows, _ := w.pgxDb.Query(query, args...)
+func (b *PgxBackend) Query(query interface{}) (RowsScanner, error) {
+	q, ok := query.(*SqlQuery)
+	if !ok {
+		return nil, ErrInvalidQueryType
+	}
+	rows, _ := b.db.Query(q.query, q.args...)
 	return &PgxRows{rows: rows}, rows.Err()
 }
 
-func (w *PgxBackend) QueryRow(query string, args ...interface{}) RowScanner {
-	return w.pgxDb.QueryRow(query, args...)
+func (b *PgxBackend) QueryRow(query interface{}) RowScanner {
+	q, ok := query.(*SqlQuery)
+	if !ok {
+		return &MockRowScanner{ScanErr: ErrInvalidQueryType}
+	}
+	return b.db.QueryRow(q.query, q.args...)
 }
 
 type PgxRows struct {
-	rows *pgx.Rows
+	rows PgxRower
 	RowsScanner
+}
+
+type PgxRower interface {
+	Close()
+	Err() error
+	Next() bool
+	FieldDescriptions() []pgx.FieldDescription
+	Values() ([]interface{}, error)
 }
 
 func (r *PgxRows) Columns() ([]string, error) {

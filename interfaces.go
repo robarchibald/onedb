@@ -1,10 +1,10 @@
-package testableDb
+package onedb
 
 type BackendConnecter interface {
 	Close() error
-	Execute(query string, args ...interface{}) error
-	Query(query string, args ...interface{}) (RowsScanner, error)
-	QueryRow(query string, args ...interface{}) RowScanner
+	Execute(query interface{}) error
+	Query(query interface{}) (RowsScanner, error)
+	QueryRow(query interface{}) RowScanner
 }
 
 type RowsScanner interface {
@@ -17,4 +17,13 @@ type RowsScanner interface {
 
 type RowScanner interface {
 	Scan(dest ...interface{}) error
+}
+
+type OneDBer interface {
+	Close() error
+	Execute(query interface{}) error
+	QueryJson(query interface{}) (string, error)
+	QueryJsonRow(query interface{}) (string, error)
+	QueryStruct(query interface{}, result interface{}) error
+	QueryStructRow(query interface{}, result interface{}) error
 }
