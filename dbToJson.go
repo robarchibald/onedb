@@ -14,19 +14,19 @@ func getJson(rows RowsScanner) (string, error) {
 		return "", err
 	}
 
-	var json bytes.Buffer
+	var b bytes.Buffer
 	writeComma := false
-	json.WriteByte('[')
+	b.WriteByte('[')
 	for rows.Next() {
-		err := jsonRow(rows, columns, vals, writeComma, &json)
+		err := scanJson(rows, columns, vals, writeComma, &b)
 		if err != nil {
 			return "", err
 		}
 		writeComma = true
 	}
-	json.WriteByte(']')
+	b.WriteByte(']')
 
-	return json.String(), nil
+	return b.String(), nil
 }
 
 func getJsonRow(rows RowsScanner) (string, error) {
@@ -35,23 +35,23 @@ func getJsonRow(rows RowsScanner) (string, error) {
 		return "", err
 	}
 
-	var json bytes.Buffer
+	var b bytes.Buffer
 	if rows.Next() {
-		err := jsonRow(rows, columns, vals, false, &json)
+		err := scanJson(rows, columns, vals, false, &b)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	return json.String(), nil
+	return b.String(), nil
 }
 
-func jsonRow(scanner RowScanner, columns []string, vals []interface{}, writeComma bool, buffer *bytes.Buffer) error {
+func scanJson(s Scanner, columns []string, vals []interface{}, writeComma bool, b *bytes.Buffer) error {
 	if writeComma {
-		buffer.WriteByte(',')
+		b.WriteByte(',')
 	}
-	buffer.WriteByte('{')
-	err := scanner.Scan(vals...)
+	b.WriteByte('{')
+	err := s.Scan(vals...)
 	if err != nil {
 		return err
 	}
@@ -60,23 +60,23 @@ func jsonRow(scanner RowScanner, columns []string, vals []interface{}, writeComm
 		jsonValue := getJsonValue(vals[i].(*interface{}))
 		if jsonValue != "null" {
 			if !firstColumn {
-				buffer.WriteByte(',')
+				b.WriteByte(',')
 			}
-			buffer.WriteString(columns[i])
-			buffer.WriteString(jsonValue)
+			b.WriteString(columns[i])
+			b.WriteString(jsonValue)
 			firstColumn = false
 		}
 	}
-	buffer.WriteByte('}')
+	b.WriteByte('}')
 	return nil
 }
 
-func getColumnNamesAndValues(rows RowsScanner, isJson bool) ([]string, []interface{}, error) {
-	if rows.Err() != nil {
-		return nil, nil, rows.Err()
+func getColumnNamesAndValues(s RowsScanner, isJson bool) ([]string, []interface{}, error) {
+	if s.Err() != nil {
+		return nil, nil, s.Err()
 	}
 
-	columnNames, err := rows.Columns()
+	columnNames, err := s.Columns()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -116,11 +116,11 @@ func getJsonValue(pval *interface{}) string {
 	case time.Time:
 		return v.Format(`"2006-01-02 15:04:05.999"`)
 	case uint8, uint16, uint32, uint64, int, int8, int16, int32, int64, float32, float64, complex64, complex128:
-		return fmt.Sprintf("%v", v) // line 80 and 84 are probably not optimized for speed since Sprintf is relatively slow
+		return fmt.Sprintf("%v", v) // probably not optimized for speed since Sprintf is relatively slow
 	case string:
 		return encodeString(string(v))
 	default:
-		return encodeString(fmt.Sprintf("%v", v)) // line 80 and 84 are probably not optimized for speed since Sprintf is relatively slow
+		return encodeString(fmt.Sprintf("%v", v)) // probably not optimized for speed since Sprintf is relatively slow
 	}
 }
 

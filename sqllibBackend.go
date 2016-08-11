@@ -32,7 +32,7 @@ func NewSqlQuery(query string, args ...interface{}) *SqlQuery {
 
 type SqllibBackend struct {
 	db SqlLibBackender
-	BackendConnecter
+	Backender
 }
 
 type SqlLibBackender interface {
@@ -51,7 +51,7 @@ func NewSqllibOneDB(driverName, connectionString string) (OneDBer, error) {
 	return NewBackendConverter(conn), nil
 }
 
-func newSqllibBackend(driverName, connectionString string) (BackendConnecter, error) {
+func newSqllibBackend(driverName, connectionString string) (Backender, error) {
 	sqlDb, err := sqlOpen.Open(driverName, connectionString)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (b *SqllibBackend) Query(query interface{}) (RowsScanner, error) {
 	return b.db.Query(q.query, q.args...)
 }
 
-func (b *SqllibBackend) QueryRow(query interface{}) RowScanner {
+func (b *SqllibBackend) QueryRow(query interface{}) Scanner {
 	q, ok := query.(*SqlQuery)
 	if !ok {
 		return &MockRowScanner{ScanErr: ErrInvalidQueryType}

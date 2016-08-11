@@ -1,7 +1,6 @@
 package onedb
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -17,7 +16,7 @@ func getStruct(rows RowsScanner, result interface{}) error {
 	sliceValue := reflect.ValueOf(result).Elem()
 	for rows.Next() {
 		itemValue := reflect.New(itemType)
-		err := structRow(rows, vals, dbToStruct, itemValue.Interface())
+		err := scanStruct(rows, vals, dbToStruct, itemValue.Interface())
 		if err != nil {
 			return err
 		}
@@ -34,7 +33,7 @@ func getStructRow(rows RowsScanner, result interface{}) error {
 
 	_, dbToStruct := getItemTypeAndMap(columns, reflect.TypeOf(result))
 	if rows.Next() {
-		err := structRow(rows, vals, dbToStruct, result)
+		err := scanStruct(rows, vals, dbToStruct, result)
 		if err != nil {
 			return err
 		}
@@ -43,8 +42,8 @@ func getStructRow(rows RowsScanner, result interface{}) error {
 	return nil
 }
 
-func structRow(scanner RowScanner, vals []interface{}, dbToStruct map[int]StructFieldInfo, result interface{}) error {
-	err := scanner.Scan(vals...)
+func scanStruct(s Scanner, vals []interface{}, dbToStruct map[int]StructFieldInfo, result interface{}) error {
+	err := s.Scan(vals...)
 	if err != nil {
 		return err
 	}
@@ -55,6 +54,9 @@ func structRow(scanner RowScanner, vals []interface{}, dbToStruct map[int]Struct
 	return nil
 }
 
+// I have some values coming from the database that are nullable, and hence pointers to: bool, int16, string and time
+// Unfortunately, I haven't figured out a better way to make it work than the lame if statement. Hopefully can replace
+// with something better whenever I run across more nullable values to set.
 func setValue(field reflect.Value, pval *interface{}) {
 	if !field.CanSet() {
 		return
@@ -62,7 +64,7 @@ func setValue(field reflect.Value, pval *interface{}) {
 	fieldType := field.Type()
 	dbType := reflect.TypeOf(*pval)
 	if dbType != reflect.TypeOf(nil) && (fieldType != dbType && fieldType.Kind() != reflect.Ptr || fieldType.Kind() == reflect.Ptr && fieldType.Elem() != dbType) {
-		fmt.Println("Warning: database and struct types don't match, field type: ", fieldType, " db type:", dbType)
+		return
 	}
 	switch v := (*pval).(type) {
 	case nil:
@@ -88,7 +90,6 @@ func setValue(field reflect.Value, pval *interface{}) {
 		} else {
 			field.SetInt(int64(v))
 		}
-
 	case int32:
 		field.SetInt(int64(v))
 	case int64:
@@ -116,14 +117,6 @@ func setValue(field reflect.Value, pval *interface{}) {
 	default:
 		field.Set(reflect.ValueOf(v))
 	}
-}
-
-func isPointer(item reflect.Type) bool {
-	return item.Kind() == reflect.Ptr
-}
-
-func isSlice(item reflect.Type) bool {
-	return item.Kind() == reflect.Slice
 }
 
 type StructFieldInfo struct {

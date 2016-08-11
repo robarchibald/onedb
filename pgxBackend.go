@@ -18,7 +18,7 @@ func (c *PgxConnPooler) NewConnPool(config pgx.ConnPoolConfig) (p PgxBackender, 
 
 type PgxBackend struct {
 	db PgxBackender
-	BackendConnecter
+	Backender
 }
 
 type PgxBackender interface {
@@ -36,7 +36,7 @@ func NewPgxOneDB(server string, port uint16, username string, password string, d
 	return NewBackendConverter(conn), nil
 }
 
-func newPgxBackend(server string, port uint16, username string, password string, database string) (BackendConnecter, error) {
+func newPgxBackend(server string, port uint16, username string, password string, database string) (Backender, error) {
 	connConfig := pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database}
 	poolConfig := pgx.ConnPoolConfig{ConnConfig: connConfig, MaxConnections: 10}
 	pgxDb, err := pgxOpen.NewConnPool(poolConfig)
@@ -61,7 +61,7 @@ func (b *PgxBackend) Query(query interface{}) (RowsScanner, error) {
 	return &PgxRows{rows: rows}, rows.Err()
 }
 
-func (b *PgxBackend) QueryRow(query interface{}) RowScanner {
+func (b *PgxBackend) QueryRow(query interface{}) Scanner {
 	q, ok := query.(*SqlQuery)
 	if !ok {
 		return &MockRowScanner{ScanErr: ErrInvalidQueryType}

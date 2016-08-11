@@ -7,32 +7,110 @@ import (
 	"testing"
 )
 
-func TestSimpleQueryJson(t *testing.T) {
+func TestBackendConverterQueryJson(t *testing.T) {
 	rows := NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	db := NewBackendConverter(&MockBackend{Rows: rows})
 
 	json, err := db.QueryJson("select * from TestTable")
 	if json != "[{\"IntVal\":1,\"StringVal\":\"hello\"}]" {
-		t.Fatal("expected different json back.  Actual:", json, err)
+		t.Error("expected different json back.  Actual:", json, err)
 	}
 	if err != nil {
-		t.Fatal("didn't expect error")
+		t.Error("didn't expect error")
+	}
+
+	db = NewBackendConverter(&MockBackend{QueryErr: errors.New("fail")})
+	_, err = db.QueryJson("select * from TestTable")
+	if err == nil {
+		t.Error("expected error")
 	}
 }
 
-func TestQueryStructNotPointerToSlice(t *testing.T) {
-	conn := &BackendConverter{}
-	err := conn.QueryStruct("no query", []TestItem{})
+func TestBackendConverterQueryJsonRow(t *testing.T) {
+	rows := NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	db := NewBackendConverter(&MockBackend{Rows: rows})
+
+	json, err := db.QueryJsonRow("select * from TestTable")
+	if json != "{\"IntVal\":1,\"StringVal\":\"hello\"}" {
+		t.Error("expected different json back.  Actual:", json, err)
+	}
+	if err != nil {
+		t.Error("didn't expect error")
+	}
+
+	db = NewBackendConverter(&MockBackend{QueryErr: errors.New("fail")})
+	_, err = db.QueryJsonRow("select * from TestTable")
 	if err == nil {
-		t.Fatal("expected error", err)
+		t.Error("expected error")
 	}
 }
 
-func TestQueryStructRowNotPointer(t *testing.T) {
-	conn := &BackendConverter{}
-	err := conn.QueryStructRow("no query", TestItem{})
+func TestBackendConverterQueryStruct(t *testing.T) {
+	rows := NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	db := NewBackendConverter(&MockBackend{Rows: rows})
+	data := []SimpleData{}
+
+	// wrong receiver type
+	err := db.QueryStruct("query", data)
 	if err == nil {
-		t.Fatal("expected error", err)
+		t.Error("expected error", err)
+	}
+
+	// success
+	err = db.QueryStruct("query", &data)
+	if err != nil || len(data) != 1 || data[0].IntVal != 1 || data[0].StringVal != "hello" {
+		t.Error("expected success")
+	}
+
+	// query error
+	db = NewBackendConverter(&MockBackend{QueryErr: errors.New("fail")})
+	err = db.QueryStruct("query", &data)
+	if err == nil {
+		t.Error("expected error", err)
+	}
+}
+
+func TestBackendConverterQueryStructRow(t *testing.T) {
+	rows := NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	db := NewBackendConverter(&MockBackend{Rows: rows})
+	data := SimpleData{}
+
+	// wrong receiver type
+	err := db.QueryStructRow("query", data)
+	if err == nil {
+		t.Error("expected error", err)
+	}
+
+	// success
+	err = db.QueryStructRow("query", &data)
+	if err != nil || data.IntVal != 1 || data.StringVal != "hello" {
+		t.Error("expected success")
+	}
+
+	// query error
+	db = NewBackendConverter(&MockBackend{QueryErr: errors.New("fail")})
+	err = db.QueryStructRow("query", &data)
+	if err == nil {
+		t.Error("expected error", err)
+	}
+}
+
+func TestBackendConverterClose(t *testing.T) {
+	db := NewBackendConverter(&MockBackend{CloseErr: errors.New("fail")})
+	if db.Close() == nil {
+		t.Error("expected error on close")
+	}
+
+	db = &BackendConverter{}
+	if db.Close() != nil {
+		t.Error("expected nil return when backend is nil")
+	}
+}
+
+func TestBackendConverterExecute(t *testing.T) {
+	db := NewBackendConverter(&MockBackend{ExecErr: errors.New("fail")})
+	if db.Execute("hi") == nil {
+		t.Error("expected error on execute")
 	}
 }
 
@@ -42,7 +120,7 @@ var ErrRowScannerInvalidData = errors.New("data must be a ptr to a struct")
 
 type MockBackend struct {
 	Rows     RowsScanner
-	Row      RowScanner
+	Row      Scanner
 	CloseErr error
 	ExecErr  error
 	QueryErr error
@@ -57,7 +135,7 @@ func (b *MockBackend) Execute(query interface{}) error {
 func (b *MockBackend) Query(query interface{}) (RowsScanner, error) {
 	return b.Rows, b.QueryErr
 }
-func (b *MockBackend) QueryRow(query interface{}) RowScanner {
+func (b *MockBackend) QueryRow(query interface{}) Scanner {
 	if b.QueryErr != nil {
 		return &MockRowScanner{ScanErr: b.QueryErr}
 	}

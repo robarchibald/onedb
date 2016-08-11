@@ -6,11 +6,11 @@ import (
 )
 
 type BackendConverter struct {
-	backend BackendConnecter
+	backend Backender
 	OneDBer
 }
 
-func NewBackendConverter(backend BackendConnecter) *BackendConverter {
+func NewBackendConverter(backend Backender) *BackendConverter {
 	return &BackendConverter{backend: backend}
 }
 
@@ -72,4 +72,12 @@ func (c *BackendConverter) Close() error {
 
 func (c *BackendConverter) Execute(query interface{}) error {
 	return c.backend.Execute(query)
+}
+
+func isPointer(item reflect.Type) bool {
+	return item.Kind() == reflect.Ptr
+}
+
+func isSlice(item reflect.Type) bool {
+	return item.Kind() == reflect.Slice
 }

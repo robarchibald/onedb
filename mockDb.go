@@ -34,7 +34,7 @@ func (r *MockDb) QueryStruct(query string, result interface{}, arguments ...inte
 	if err != nil {
 		return err
 	}
-	return set(data, result)
+	return setDest(data, result)
 }
 func (r *MockDb) QueryStructRow(query string, result interface{}, arguments ...interface{}) error {
 	resultType := reflect.TypeOf(result)
@@ -45,7 +45,7 @@ func (r *MockDb) QueryStructRow(query string, result interface{}, arguments ...i
 	if err != nil {
 		return err
 	}
-	return set(data, result)
+	return setDest(data, result)
 }
 
 func (r *MockDb) Close() error {
@@ -80,7 +80,7 @@ func (r *MockDb) nextStruct() (interface{}, error) {
 	return data, nil
 }
 
-func set(source interface{}, dest interface{}) error {
+func setDest(source interface{}, dest interface{}) error {
 	sourceType := reflect.TypeOf(source)
 	destType := reflect.TypeOf(dest)
 	if sourceType != destType.Elem() {

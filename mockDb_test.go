@@ -91,7 +91,7 @@ func TestQueryStructRow(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	err := set("hello", &SimpleData{1, "test"})
+	err := setDest("hello", &SimpleData{1, "test"})
 	if err == nil {
 		t.Error("expected error due to non-matching types")
 	}
