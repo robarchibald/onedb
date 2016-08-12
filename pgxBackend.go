@@ -64,7 +64,7 @@ func (b *PgxBackend) Query(query interface{}) (RowsScanner, error) {
 func (b *PgxBackend) QueryRow(query interface{}) Scanner {
 	q, ok := query.(*SqlQuery)
 	if !ok {
-		return &MockRowScanner{ScanErr: ErrInvalidQueryType}
+		return &ErrorScanner{ErrInvalidQueryType}
 	}
 	return b.db.QueryRow(q.query, q.args...)
 }

@@ -108,7 +108,7 @@ func TestClose(t *testing.T) {
 func TestExec(t *testing.T) {
 	err := errors.New("fail")
 	d := &MockDb{ExecErr: err}
-	if d.Execute("query", "args") != err {
+	if d.Execute("query") != err {
 		t.Error("expected error")
 	}
 }

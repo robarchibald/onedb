@@ -17,15 +17,15 @@ func NewMockDb(data ...interface{}) *MockDb {
 	return &MockDb{data: data}
 }
 
-func (r *MockDb) QueryJson(query string, arguments ...interface{}) (string, error) {
+func (r *MockDb) QueryJson(query interface{}) (string, error) {
 	return r.nextJson()
 }
 
-func (r *MockDb) QueryJsonRow(query string, arguments ...interface{}) (string, error) {
+func (r *MockDb) QueryJsonRow(query interface{}) (string, error) {
 	return r.nextJson()
 
 }
-func (r *MockDb) QueryStruct(query string, result interface{}, arguments ...interface{}) error {
+func (r *MockDb) QueryStruct(query interface{}, result interface{}) error {
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() != reflect.Ptr || resultType.Elem().Kind() != reflect.Slice || resultType.Elem().Elem().Kind() != reflect.Struct {
 		return errors.New("result must be a pointer to a slice of structs")
@@ -36,7 +36,7 @@ func (r *MockDb) QueryStruct(query string, result interface{}, arguments ...inte
 	}
 	return setDest(data, result)
 }
-func (r *MockDb) QueryStructRow(query string, result interface{}, arguments ...interface{}) error {
+func (r *MockDb) QueryStructRow(query interface{}, result interface{}) error {
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() != reflect.Ptr || resultType.Elem().Kind() != reflect.Struct {
 		return errors.New("result must be a pointer to a struct")
@@ -52,7 +52,7 @@ func (r *MockDb) Close() error {
 	return r.CloseErr
 }
 
-func (r *MockDb) Execute(query string, args ...interface{}) error {
+func (r *MockDb) Execute(query interface{}) error {
 	return r.ExecErr
 }
 
@@ -92,3 +92,12 @@ func setDest(source interface{}, dest interface{}) error {
 	destValue.Elem().Set(sourceValue)
 	return nil
 }
+
+type ErrorScanner struct {
+	Err     error
+}
+
+func (s *ErrorScanner) Scan(dest ...interface{}) error {
+	return s.Err
+}
+

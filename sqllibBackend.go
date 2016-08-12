@@ -78,7 +78,7 @@ func (b *SqllibBackend) Query(query interface{}) (RowsScanner, error) {
 func (b *SqllibBackend) QueryRow(query interface{}) Scanner {
 	q, ok := query.(*SqlQuery)
 	if !ok {
-		return &MockRowScanner{ScanErr: ErrInvalidQueryType}
+		return &ErrorScanner{ErrInvalidQueryType}
 	}
 	return b.db.QueryRow(q.query, q.args...)
 }
