@@ -43,7 +43,7 @@ type SqlLibBackender interface {
 	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
-func NewSqllibOneDB(driverName, connectionString string) (OneDBer, error) {
+func NewSqllib(driverName, connectionString string) (OneDBer, error) {
 	conn, err := newSqllibBackend(driverName, connectionString)
 	if err != nil {
 		return nil, err

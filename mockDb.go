@@ -13,7 +13,7 @@ type MockDb struct {
 	ExecErr  error
 }
 
-func NewMockDb(data ...interface{}) *MockDb {
+func NewMock(data ...interface{}) *MockDb {
 	return &MockDb{data: data}
 }
 
@@ -94,10 +94,9 @@ func setDest(source interface{}, dest interface{}) error {
 }
 
 type ErrorScanner struct {
-	Err     error
+	Err error
 }
 
 func (s *ErrorScanner) Scan(dest ...interface{}) error {
 	return s.Err
 }
-

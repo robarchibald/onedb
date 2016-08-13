@@ -28,7 +28,7 @@ type PgxBackender interface {
 	QueryRow(query string, args ...interface{}) *pgx.Row
 }
 
-func NewPgxOneDB(server string, port uint16, username string, password string, database string) (OneDBer, error) {
+func NewPgx(server string, port uint16, username string, password string, database string) (OneDBer, error) {
 	conn, err := newPgxBackend(server, port, username, password, database)
 	if err != nil {
 		return nil, err

@@ -17,13 +17,13 @@ func TestNewSqlQuery(t *testing.T) {
 
 func TestNewSqllibOneDB(t *testing.T) {
 	sqlOpen = &MockSqlOpener{}
-	_, err := NewSqllibOneDB("mssql", connectionString)
+	_, err := NewSqllib("mssql", connectionString)
 	if err != nil {
 		t.Error("expected success")
 	}
 
 	sqlOpen = &MockSqlOpener{Err: errors.New("fail")}
-	_, err = NewSqllibOneDB("mssql", connectionString)
+	_, err = NewSqllib("mssql", connectionString)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -42,7 +42,7 @@ func TestNewSqllibOneDBRealConnection(t *testing.T) {
 		t.SkipNow()
 	}
 	sqlOpen = &SqllibOpener{}
-	_, err := NewSqllibOneDB("mssql", connectionString)
+	_, err := NewSqllib("mssql", connectionString)
 	if err != nil {
 		t.Error("expected connection success", err)
 	}

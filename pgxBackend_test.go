@@ -9,13 +9,13 @@ import (
 
 func TestNewPgxOneDB(t *testing.T) {
 	pgxOpen = &MockConnPoolNewer{}
-	_, err := NewPgxOneDB("localhost", 5432, "user", "password", "database")
+	_, err := NewPgx("localhost", 5432, "user", "password", "database")
 	if err != nil {
 		t.Error("expected success")
 	}
 
 	pgxOpen = &MockConnPoolNewer{Err: errors.New("fail")}
-	_, err = NewPgxOneDB("localhost", 5432, "user", "password", "database")
+	_, err = NewPgx("localhost", 5432, "user", "password", "database")
 	if err == nil {
 		t.Error("expected fail")
 	}
@@ -26,7 +26,7 @@ func TestNewPgxOneDBRealConnection(t *testing.T) {
 		t.SkipNow()
 	}
 	pgxOpen = &PgxConnPooler{}
-	_, err := NewPgxOneDB("localhost", 5432, "user", "password", "database")
+	_, err := NewPgx("localhost", 5432, "user", "password", "database")
 	if err != nil {
 		t.Error("expected connection success", err)
 	}
