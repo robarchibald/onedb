@@ -8,13 +8,13 @@ import (
 )
 
 func TestNewPgxOneDB(t *testing.T) {
-	pgxOpen = &MockConnPoolNewer{}
+	pgxCreate = &MockConnPoolNewer{}
 	_, err := NewPgx("localhost", 5432, "user", "password", "database")
 	if err != nil {
 		t.Error("expected success")
 	}
 
-	pgxOpen = &MockConnPoolNewer{Err: errors.New("fail")}
+	pgxCreate = &MockConnPoolNewer{Err: errors.New("fail")}
 	_, err = NewPgx("localhost", 5432, "user", "password", "database")
 	if err == nil {
 		t.Error("expected fail")
@@ -25,7 +25,7 @@ func TestNewPgxOneDBRealConnection(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	pgxOpen = &PgxConnPooler{}
+	pgxCreate = &pgxRealCreator{}
 	_, err := NewPgx("localhost", 5432, "user", "password", "database")
 	if err != nil {
 		t.Error("expected connection success", err)
@@ -34,7 +34,7 @@ func TestNewPgxOneDBRealConnection(t *testing.T) {
 
 func TestPgxClose(t *testing.T) {
 	c := NewMockPgxConnector()
-	d := &PgxBackend{db: c}
+	d := &pgxBackend{db: c}
 	d.Close()
 	if len(c.MethodsCalled) != 1 || len(c.MethodsCalled["Close"]) != 1 {
 		t.Error("expected close method to be called on backend")
@@ -43,7 +43,7 @@ func TestPgxClose(t *testing.T) {
 
 func TestPgxQuery(t *testing.T) {
 	c := NewMockPgxConnector()
-	d := &PgxBackend{db: c}
+	d := &pgxBackend{db: c}
 	_, err := d.Query("bogus")
 	if err == nil {
 		t.Error("expected error")
@@ -61,7 +61,7 @@ func TestPgxQuery(t *testing.T) {
 
 func TestPgxQueryRow(t *testing.T) {
 	c := NewMockPgxConnector()
-	d := &PgxBackend{db: c}
+	d := &pgxBackend{db: c}
 	row := d.QueryRow("bogus")
 	if row.Scan(nil) == nil {
 		t.Error("expected error")
@@ -79,7 +79,7 @@ func TestPgxQueryRow(t *testing.T) {
 
 func TestPgxRowsColumns(t *testing.T) {
 	m := NewMockPgxRows()
-	r := &PgxRows{rows: m}
+	r := &pgxRows{rows: m}
 	c, _ := r.Columns()
 	if len(m.MethodsCalled["FieldDescriptions"]) != 1 || len(c) != 2 || c[0] != "F1" || c[1] != "F2" {
 		t.Error("expected FieldDescriptions method to be called")
@@ -88,7 +88,7 @@ func TestPgxRowsColumns(t *testing.T) {
 
 func TestPgxRowsNext(t *testing.T) {
 	m := NewMockPgxRows()
-	r := &PgxRows{rows: m}
+	r := &pgxRows{rows: m}
 
 	if r.Next() || len(m.MethodsCalled["Next"]) != 1 {
 		t.Error("expected Next method to be called")
@@ -97,7 +97,7 @@ func TestPgxRowsNext(t *testing.T) {
 
 func TestPgxRowsClose(t *testing.T) {
 	m := NewMockPgxRows()
-	r := &PgxRows{rows: m}
+	r := &pgxRows{rows: m}
 	r.Close()
 	if len(m.MethodsCalled["Close"]) != 1 {
 		t.Error("expected Close method to be called")
@@ -106,7 +106,7 @@ func TestPgxRowsClose(t *testing.T) {
 
 func TestPgxRowsScan(t *testing.T) {
 	m := NewMockPgxRows()
-	r := &PgxRows{rows: m}
+	r := &pgxRows{rows: m}
 	var id interface{}
 	var name interface{}
 	r.Scan(&id, &name)
@@ -123,7 +123,7 @@ func TestPgxRowsScan(t *testing.T) {
 
 func TestPgxRowsErr(t *testing.T) {
 	m := NewMockPgxRows()
-	r := &PgxRows{rows: m}
+	r := &pgxRows{rows: m}
 	r.Err()
 	if len(m.MethodsCalled["Err"]) != 1 {
 		t.Error("expected Err method to be called")
@@ -132,11 +132,11 @@ func TestPgxRowsErr(t *testing.T) {
 
 /***************************** MOCKS ****************************/
 type MockConnPoolNewer struct {
-	connector PgxBackender
+	connector pgxBackender
 	Err       error
 }
 
-func (c *MockConnPoolNewer) NewConnPool(config pgx.ConnPoolConfig) (p PgxBackender, err error) {
+func (c *MockConnPoolNewer) newConnPool(config pgx.ConnPoolConfig) (p pgxBackender, err error) {
 	if c.connector == nil {
 		c.connector = NewMockPgxConnector()
 	}

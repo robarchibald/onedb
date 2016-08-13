@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func getStruct(rows RowsScanner, result interface{}) error {
+func getStruct(rows rowsScanner, result interface{}) error {
 	columns, vals, err := getColumnNamesAndValues(rows, false)
 	if err != nil {
 		return err
@@ -25,7 +25,7 @@ func getStruct(rows RowsScanner, result interface{}) error {
 	return nil
 }
 
-func getStructRow(rows RowsScanner, result interface{}) error {
+func getStructRow(rows rowsScanner, result interface{}) error {
 	columns, vals, err := getColumnNamesAndValues(rows, false)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func getStructRow(rows RowsScanner, result interface{}) error {
 	return nil
 }
 
-func scanStruct(s Scanner, vals []interface{}, dbToStruct map[int]StructFieldInfo, result interface{}) error {
+func scanStruct(s scanner, vals []interface{}, dbToStruct map[int]structFieldInfo, result interface{}) error {
 	err := s.Scan(vals...)
 	if err != nil {
 		return err
@@ -119,15 +119,15 @@ func setValue(field reflect.Value, pval *interface{}) {
 	}
 }
 
-type StructFieldInfo struct {
+type structFieldInfo struct {
 	Name  string
 	Type  reflect.Type
 	Index int
 }
 
-func getItemTypeAndMap(columns []string, resultType reflect.Type) (reflect.Type, map[int]StructFieldInfo) {
+func getItemTypeAndMap(columns []string, resultType reflect.Type) (reflect.Type, map[int]structFieldInfo) {
 	itemType := resultType.Elem()
-	dbColumnToStruct := make(map[int]StructFieldInfo)
+	dbColumnToStruct := make(map[int]structFieldInfo)
 
 	// make columns all lowercase
 	for i, column := range columns {
@@ -136,7 +136,7 @@ func getItemTypeAndMap(columns []string, resultType reflect.Type) (reflect.Type,
 
 	for structIndex := 0; structIndex < itemType.NumField(); structIndex++ {
 		field := itemType.Field(structIndex)
-		structFieldInfo := StructFieldInfo{strings.ToLower(field.Name), field.Type, structIndex}
+		structFieldInfo := structFieldInfo{strings.ToLower(field.Name), field.Type, structIndex}
 		for dbIndex, column := range columns {
 			if column == structFieldInfo.Name {
 				dbColumnToStruct[dbIndex] = structFieldInfo

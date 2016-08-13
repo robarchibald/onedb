@@ -16,22 +16,20 @@ func TestNewSqlQuery(t *testing.T) {
 }
 
 func TestNewSqllibOneDB(t *testing.T) {
-	sqlOpen = &MockSqlOpener{}
+	sqllibCreate = &sqllibMockCreator{}
 	_, err := NewSqllib("mssql", connectionString)
 	if err != nil {
 		t.Error("expected success")
 	}
 
-	sqlOpen = &MockSqlOpener{Err: errors.New("fail")}
+	sqllibCreate = &sqllibMockCreator{Err: errors.New("fail")}
 	_, err = NewSqllib("mssql", connectionString)
 	if err == nil {
 		t.Error("expected error")
 	}
-}
 
-func TestNewSqllibBackend(t *testing.T) {
-	sqlOpen = &MockSqlOpener{connector: &MockSqlBackend{PingErr: errors.New("fail")}}
-	_, err := newSqllibBackend("mssql", connectionString)
+	sqllibCreate = &sqllibMockCreator{conn: &mockSqllibBackend{PingErr: errors.New("fail")}}
+	_, err = NewSqllib("mssql", connectionString)
 	if err == nil {
 		t.Error("expected fail on ping")
 	}
@@ -41,7 +39,7 @@ func TestNewSqllibOneDBRealConnection(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	sqlOpen = &SqllibOpener{}
+	sqllibCreate = &sqllibRealCreator{}
 	_, err := NewSqllib("mssql", connectionString)
 	if err != nil {
 		t.Error("expected connection success", err)
@@ -49,8 +47,8 @@ func TestNewSqllibOneDBRealConnection(t *testing.T) {
 }
 
 func TestSqllibClose(t *testing.T) {
-	c := NewMockSqlConnector()
-	d := &SqllibBackend{db: c}
+	c := newMockSqllibBackend()
+	d := &sqllibBackend{db: c}
 	d.Close()
 	if len(c.MethodsCalled) != 1 || len(c.MethodsCalled["Close"]) != 1 {
 		t.Error("expected close method to be called on backend")
@@ -58,8 +56,8 @@ func TestSqllibClose(t *testing.T) {
 }
 
 func TestSqllibQuery(t *testing.T) {
-	c := NewMockSqlConnector()
-	d := &SqllibBackend{db: c}
+	c := newMockSqllibBackend()
+	d := &sqllibBackend{db: c}
 	_, err := d.Query("bogus")
 	if err == nil {
 		t.Error("expected error")
@@ -76,8 +74,8 @@ func TestSqllibQuery(t *testing.T) {
 }
 
 func TestSqllibQueryRow(t *testing.T) {
-	c := NewMockSqlConnector()
-	d := &SqllibBackend{db: c}
+	c := newMockSqllibBackend()
+	d := &sqllibBackend{db: c}
 	row := d.QueryRow("bogus")
 	if row.Scan(nil) == nil {
 		t.Error("expected error")
@@ -94,44 +92,44 @@ func TestSqllibQueryRow(t *testing.T) {
 }
 
 /***************************** MOCKS ****************************/
-type MockSqlOpener struct {
-	connector SqlLibBackender
-	Err       error
+type sqllibMockCreator struct {
+	conn sqlLibBackender
+	Err  error
 }
 
-func (o *MockSqlOpener) Open(driverName, dataSourceName string) (SqlLibBackender, error) {
-	if o.connector == nil {
-		o.connector = NewMockSqlConnector()
+func (s *sqllibMockCreator) Open(driverName, dataSourceName string) (sqlLibBackender, error) {
+	if s.conn == nil {
+		s.conn = newMockSqllibBackend()
 	}
-	return o.connector, o.Err
+	return s.conn, s.Err
 }
 
-type MockSqlBackend struct {
+type mockSqllibBackend struct {
 	MethodsCalled map[string][]interface{}
 	PingErr       error
 }
 
-func NewMockSqlConnector() *MockSqlBackend {
-	return &MockSqlBackend{MethodsCalled: make(map[string][]interface{})}
+func newMockSqllibBackend() *mockSqllibBackend {
+	return &mockSqllibBackend{MethodsCalled: make(map[string][]interface{})}
 }
 
-func (c *MockSqlBackend) Ping() error {
+func (c *mockSqllibBackend) Ping() error {
 	return c.PingErr
 }
 
-func (c *MockSqlBackend) Close() error {
+func (c *mockSqllibBackend) Close() error {
 	c.MethodsCalled["Close"] = append(c.MethodsCalled["Close"], nil)
 	return nil
 }
-func (c *MockSqlBackend) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (c *mockSqllibBackend) Exec(query string, args ...interface{}) (sql.Result, error) {
 	c.MethodsCalled["Exec"] = append(c.MethodsCalled["Exec"], NewSqlQuery(query, args...))
 	return nil, nil
 }
-func (c *MockSqlBackend) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (c *mockSqllibBackend) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	c.MethodsCalled["Query"] = append(c.MethodsCalled["Query"], NewSqlQuery(query, args...))
 	return nil, nil
 }
-func (c *MockSqlBackend) QueryRow(query string, args ...interface{}) *sql.Row {
+func (c *mockSqllibBackend) QueryRow(query string, args ...interface{}) *sql.Row {
 	c.MethodsCalled["QueryRow"] = append(c.MethodsCalled["QueryRow"], NewSqlQuery(query, args...))
 	return nil
 }

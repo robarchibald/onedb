@@ -5,36 +5,47 @@ import (
 	"reflect"
 )
 
-type BackendConverter struct {
-	backend Backender
-	OneDBer
+type backender interface {
+	Close() error
+	Execute(query interface{}) error
+	Query(query interface{}) (rowsScanner, error)
+	QueryRow(query interface{}) scanner
 }
 
-func NewBackendConverter(backend Backender) *BackendConverter {
-	return &BackendConverter{backend: backend}
+type backendConverter struct {
+	backend backender
+	DBer
 }
 
-func (c *BackendConverter) QueryJson(query interface{}) (string, error) {
+func newBackendConverter(backend backender) DBer {
+	return &backendConverter{backend: backend}
+}
+
+func (c *backendConverter) Backend() interface{} {
+	return c.backend
+}
+
+func (c *backendConverter) QueryJSON(query interface{}) (string, error) {
 	rows, err := c.backend.Query(query)
 	if err != nil {
 		return "", err
 	}
 	defer rows.Close()
 
-	return getJson(rows)
+	return getJSON(rows)
 }
 
-func (c *BackendConverter) QueryJsonRow(query interface{}) (string, error) {
+func (c *backendConverter) QueryJSONRow(query interface{}) (string, error) {
 	rows, err := c.backend.Query(query)
 	if err != nil {
 		return "", err
 	}
 	defer rows.Close()
 
-	return getJsonRow(rows)
+	return getJSONRow(rows)
 }
 
-func (c *BackendConverter) QueryStruct(query interface{}, result interface{}) error {
+func (c *backendConverter) QueryStruct(query interface{}, result interface{}) error {
 	resultType := reflect.TypeOf(result)
 	if !isPointer(resultType) || !isSlice(resultType.Elem()) {
 		return errors.New("Invalid result argument.  Must be a pointer to a slice")
@@ -49,7 +60,7 @@ func (c *BackendConverter) QueryStruct(query interface{}, result interface{}) er
 	return getStruct(rows, result)
 }
 
-func (c *BackendConverter) QueryStructRow(query interface{}, result interface{}) error {
+func (c *backendConverter) QueryStructRow(query interface{}, result interface{}) error {
 	if !isPointer(reflect.TypeOf(result)) {
 		return errors.New("Invalid result argument.  Must be a pointer to a struct")
 	}
@@ -63,14 +74,14 @@ func (c *BackendConverter) QueryStructRow(query interface{}, result interface{})
 	return getStructRow(rows, result)
 }
 
-func (c *BackendConverter) Close() error {
+func (c *backendConverter) Close() error {
 	if c.backend != nil {
 		return c.backend.Close()
 	}
 	return nil
 }
 
-func (c *BackendConverter) Execute(query interface{}) error {
+func (c *backendConverter) Execute(query interface{}) error {
 	return c.backend.Execute(query)
 }
 

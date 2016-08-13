@@ -8,10 +8,10 @@ import (
 )
 
 func TestBackendConverterQueryJson(t *testing.T) {
-	rows := NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
-	db := NewBackendConverter(&MockBackend{Rows: rows})
+	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	db := newBackendConverter(&mockBackend{Rows: rows})
 
-	json, err := db.QueryJson("select * from TestTable")
+	json, err := db.QueryJSON("select * from TestTable")
 	if json != "[{\"IntVal\":1,\"StringVal\":\"hello\"}]" {
 		t.Error("expected different json back.  Actual:", json, err)
 	}
@@ -19,18 +19,18 @@ func TestBackendConverterQueryJson(t *testing.T) {
 		t.Error("didn't expect error")
 	}
 
-	db = NewBackendConverter(&MockBackend{QueryErr: errors.New("fail")})
-	_, err = db.QueryJson("select * from TestTable")
+	db = newBackendConverter(&mockBackend{QueryErr: errors.New("fail")})
+	_, err = db.QueryJSON("select * from TestTable")
 	if err == nil {
 		t.Error("expected error")
 	}
 }
 
 func TestBackendConverterQueryJsonRow(t *testing.T) {
-	rows := NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
-	db := NewBackendConverter(&MockBackend{Rows: rows})
+	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	db := newBackendConverter(&mockBackend{Rows: rows})
 
-	json, err := db.QueryJsonRow("select * from TestTable")
+	json, err := db.QueryJSONRow("select * from TestTable")
 	if json != "{\"IntVal\":1,\"StringVal\":\"hello\"}" {
 		t.Error("expected different json back.  Actual:", json, err)
 	}
@@ -38,16 +38,16 @@ func TestBackendConverterQueryJsonRow(t *testing.T) {
 		t.Error("didn't expect error")
 	}
 
-	db = NewBackendConverter(&MockBackend{QueryErr: errors.New("fail")})
-	_, err = db.QueryJsonRow("select * from TestTable")
+	db = newBackendConverter(&mockBackend{QueryErr: errors.New("fail")})
+	_, err = db.QueryJSONRow("select * from TestTable")
 	if err == nil {
 		t.Error("expected error")
 	}
 }
 
 func TestBackendConverterQueryStruct(t *testing.T) {
-	rows := NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
-	db := NewBackendConverter(&MockBackend{Rows: rows})
+	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	db := newBackendConverter(&mockBackend{Rows: rows})
 	data := []SimpleData{}
 
 	// wrong receiver type
@@ -63,7 +63,7 @@ func TestBackendConverterQueryStruct(t *testing.T) {
 	}
 
 	// query error
-	db = NewBackendConverter(&MockBackend{QueryErr: errors.New("fail")})
+	db = newBackendConverter(&mockBackend{QueryErr: errors.New("fail")})
 	err = db.QueryStruct("query", &data)
 	if err == nil {
 		t.Error("expected error", err)
@@ -71,8 +71,8 @@ func TestBackendConverterQueryStruct(t *testing.T) {
 }
 
 func TestBackendConverterQueryStructRow(t *testing.T) {
-	rows := NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
-	db := NewBackendConverter(&MockBackend{Rows: rows})
+	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	db := newBackendConverter(&mockBackend{Rows: rows})
 	data := SimpleData{}
 
 	// wrong receiver type
@@ -88,7 +88,7 @@ func TestBackendConverterQueryStructRow(t *testing.T) {
 	}
 
 	// query error
-	db = NewBackendConverter(&MockBackend{QueryErr: errors.New("fail")})
+	db = newBackendConverter(&mockBackend{QueryErr: errors.New("fail")})
 	err = db.QueryStructRow("query", &data)
 	if err == nil {
 		t.Error("expected error", err)
@@ -96,19 +96,19 @@ func TestBackendConverterQueryStructRow(t *testing.T) {
 }
 
 func TestBackendConverterClose(t *testing.T) {
-	db := NewBackendConverter(&MockBackend{CloseErr: errors.New("fail")})
+	db := newBackendConverter(&mockBackend{CloseErr: errors.New("fail")})
 	if db.Close() == nil {
 		t.Error("expected error on close")
 	}
 
-	db = &BackendConverter{}
+	db = &backendConverter{}
 	if db.Close() != nil {
 		t.Error("expected nil return when backend is nil")
 	}
 }
 
 func TestBackendConverterExecute(t *testing.T) {
-	db := NewBackendConverter(&MockBackend{ExecErr: errors.New("fail")})
+	db := newBackendConverter(&mockBackend{ExecErr: errors.New("fail")})
 	if db.Execute("hi") == nil {
 		t.Error("expected error on execute")
 	}
@@ -118,31 +118,31 @@ func TestBackendConverterExecute(t *testing.T) {
 var ErrRowsScannerInvalidData = errors.New("data must be a slice of structs")
 var ErrRowScannerInvalidData = errors.New("data must be a ptr to a struct")
 
-type MockBackend struct {
-	Rows     RowsScanner
-	Row      Scanner
+type mockBackend struct {
+	Rows     rowsScanner
+	Row      scanner
 	CloseErr error
 	ExecErr  error
 	QueryErr error
 }
 
-func (b *MockBackend) Close() error {
+func (b *mockBackend) Close() error {
 	return b.CloseErr
 }
-func (b *MockBackend) Execute(query interface{}) error {
+func (b *mockBackend) Execute(query interface{}) error {
 	return b.ExecErr
 }
-func (b *MockBackend) Query(query interface{}) (RowsScanner, error) {
+func (b *mockBackend) Query(query interface{}) (rowsScanner, error) {
 	return b.Rows, b.QueryErr
 }
-func (b *MockBackend) QueryRow(query interface{}) Scanner {
+func (b *mockBackend) QueryRow(query interface{}) scanner {
 	if b.QueryErr != nil {
-		return &MockRowScanner{ScanErr: b.QueryErr}
+		return &mockScanner{ScanErr: b.QueryErr}
 	}
 	return b.Row
 }
 
-type MockRowsScanner struct {
+type mockRowsScanner struct {
 	sliceValue reflect.Value
 	sliceLen   int
 	structType reflect.Type
@@ -155,19 +155,19 @@ type MockRowsScanner struct {
 	ErrErr     error
 }
 
-func NewMockRowsScanner(data interface{}) *MockRowsScanner {
+func newMockRowsScanner(data interface{}) *mockRowsScanner {
 	if data == nil || reflect.TypeOf(data).Kind() != reflect.Slice || reflect.TypeOf(data).Elem().Kind() != reflect.Struct {
-		return &MockRowsScanner{ScanErr: ErrRowsScannerInvalidData, ErrErr: ErrRowsScannerInvalidData}
+		return &mockRowsScanner{ScanErr: ErrRowsScannerInvalidData, ErrErr: ErrRowsScannerInvalidData}
 	}
 	sliceValue := reflect.ValueOf(data)
 	sliceLen := sliceValue.Len()
 	structType := reflect.TypeOf(data).Elem()
 	structLen := structType.NumField()
 
-	return &MockRowsScanner{data: data, currentRow: -1, sliceValue: sliceValue, sliceLen: sliceLen, structType: structType, structLen: structLen}
+	return &mockRowsScanner{data: data, currentRow: -1, sliceValue: sliceValue, sliceLen: sliceLen, structType: structType, structLen: structLen}
 }
 
-func (r *MockRowsScanner) Columns() ([]string, error) {
+func (r *mockRowsScanner) Columns() ([]string, error) {
 	if r.ColumnsErr != nil {
 		return nil, r.ColumnsErr
 	}
@@ -179,17 +179,17 @@ func (r *MockRowsScanner) Columns() ([]string, error) {
 	return columns, nil
 }
 
-func (r *MockRowsScanner) Next() bool {
+func (r *mockRowsScanner) Next() bool {
 	r.currentRow++
 	if r.currentRow >= r.sliceLen {
 		return false
 	}
 	return true
 }
-func (r *MockRowsScanner) Close() error {
+func (r *mockRowsScanner) Close() error {
 	return r.CloseErr
 }
-func (r *MockRowsScanner) Scan(dest ...interface{}) error {
+func (r *mockRowsScanner) Scan(dest ...interface{}) error {
 	if r.ScanErr != nil {
 		return r.ScanErr
 	}
@@ -203,7 +203,7 @@ func setDestValue(structVal reflect.Value, dest []interface{}) error {
 	if len(dest) != structVal.NumField() {
 		return fmt.Errorf("expected equal number of dest values as source. Expected: %d, Actual: %d", structVal.NumField(), len(dest))
 	}
-	for i, _ := range dest {
+	for i := range dest {
 		destination := reflect.ValueOf(dest[i]).Elem()
 		source := structVal.Field(i)
 		if destination.Type() != source.Type() && destination.Type().Kind() != reflect.Interface {
@@ -214,25 +214,25 @@ func setDestValue(structVal reflect.Value, dest []interface{}) error {
 	return nil
 }
 
-func (r *MockRowsScanner) Err() error {
+func (r *mockRowsScanner) Err() error {
 	return r.ErrErr
 }
 
-type MockRowScanner struct {
+type mockScanner struct {
 	structValue reflect.Value
 	data        interface{}
 	ScanErr     error
 }
 
-func NewMockRowScanner(data interface{}) *MockRowScanner {
+func newMockScanner(data interface{}) *mockScanner {
 	if data == nil || reflect.TypeOf(data).Kind() != reflect.Ptr || reflect.TypeOf(data).Elem().Kind() != reflect.Struct {
-		return &MockRowScanner{ScanErr: ErrRowScannerInvalidData}
+		return &mockScanner{ScanErr: ErrRowScannerInvalidData}
 	}
 	structValue := reflect.ValueOf(data).Elem()
-	return &MockRowScanner{data: data, structValue: structValue}
+	return &mockScanner{data: data, structValue: structValue}
 }
 
-func (s *MockRowScanner) Scan(dest ...interface{}) error {
+func (s *mockScanner) Scan(dest ...interface{}) error {
 	if s.ScanErr != nil {
 		return s.ScanErr
 	}

@@ -1,29 +1,23 @@
 package onedb
 
-type Backender interface {
-	Close() error
-	Execute(query interface{}) error
-	Query(query interface{}) (RowsScanner, error)
-	QueryRow(query interface{}) Scanner
-}
-
-type RowsScanner interface {
+type rowsScanner interface {
 	Columns() ([]string, error)
 	Next() bool
 	Close() error
 	Err() error
-	Scanner
+	scanner
 }
 
-type Scanner interface {
+type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-type OneDBer interface {
+type DBer interface {
+	Backend() interface{}
 	Close() error
 	Execute(query interface{}) error
-	QueryJson(query interface{}) (string, error)
-	QueryJsonRow(query interface{}) (string, error)
+	QueryJSON(query interface{}) (string, error)
+	QueryJSONRow(query interface{}) (string, error)
 	QueryStruct(query interface{}, result interface{}) error
 	QueryStructRow(query interface{}, result interface{}) error
 }

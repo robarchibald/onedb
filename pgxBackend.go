@@ -4,77 +4,69 @@ import (
 	"gopkg.in/jackc/pgx.v2"
 )
 
-var pgxOpen ConnPoolNewer = &PgxConnPooler{}
+var pgxCreate pgxCreator = &pgxRealCreator{}
 
-type ConnPoolNewer interface {
-	NewConnPool(config pgx.ConnPoolConfig) (p PgxBackender, err error)
+type pgxCreator interface {
+	newConnPool(config pgx.ConnPoolConfig) (p pgxBackender, err error)
 }
 
-type PgxConnPooler struct{}
+type pgxRealCreator struct{}
 
-func (c *PgxConnPooler) NewConnPool(config pgx.ConnPoolConfig) (p PgxBackender, err error) {
+func (c *pgxRealCreator) newConnPool(config pgx.ConnPoolConfig) (p pgxBackender, err error) {
 	return pgx.NewConnPool(config)
 }
 
-type PgxBackend struct {
-	db PgxBackender
-	Backender
+type pgxBackend struct {
+	db pgxBackender
+	backender
 }
 
-type PgxBackender interface {
+type pgxBackender interface {
 	Close()
 	Exec(query string, args ...interface{}) (pgx.CommandTag, error)
 	Query(query string, args ...interface{}) (*pgx.Rows, error)
 	QueryRow(query string, args ...interface{}) *pgx.Row
 }
 
-func NewPgx(server string, port uint16, username string, password string, database string) (OneDBer, error) {
-	conn, err := newPgxBackend(server, port, username, password, database)
-	if err != nil {
-		return nil, err
-	}
-	return NewBackendConverter(conn), nil
-}
-
-func newPgxBackend(server string, port uint16, username string, password string, database string) (Backender, error) {
+func NewPgx(server string, port uint16, username string, password string, database string) (DBer, error) {
 	connConfig := pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database}
 	poolConfig := pgx.ConnPoolConfig{ConnConfig: connConfig, MaxConnections: 10}
-	pgxDb, err := pgxOpen.NewConnPool(poolConfig)
+	pgxDb, err := pgxCreate.newConnPool(poolConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return &PgxBackend{db: pgxDb}, nil
+	return newBackendConverter(&pgxBackend{db: pgxDb}), nil
 }
 
-func (b *PgxBackend) Close() error {
+func (b *pgxBackend) Close() error {
 	b.db.Close()
 	return nil
 }
 
-func (b *PgxBackend) Query(query interface{}) (RowsScanner, error) {
+func (b *pgxBackend) Query(query interface{}) (rowsScanner, error) {
 	q, ok := query.(*SqlQuery)
 	if !ok {
-		return nil, ErrInvalidQueryType
+		return nil, errInvalidQueryType
 	}
 	rows, _ := b.db.Query(q.query, q.args...)
-	return &PgxRows{rows: rows}, rows.Err()
+	return &pgxRows{rows: rows}, rows.Err()
 }
 
-func (b *PgxBackend) QueryRow(query interface{}) Scanner {
+func (b *pgxBackend) QueryRow(query interface{}) scanner {
 	q, ok := query.(*SqlQuery)
 	if !ok {
-		return &ErrorScanner{ErrInvalidQueryType}
+		return &errorScanner{errInvalidQueryType}
 	}
 	return b.db.QueryRow(q.query, q.args...)
 }
 
-type PgxRows struct {
-	rows PgxRower
-	RowsScanner
+type pgxRows struct {
+	rows pgxRower
+	rowsScanner
 }
 
-type PgxRower interface {
+type pgxRower interface {
 	Close()
 	Err() error
 	Next() bool
@@ -82,7 +74,7 @@ type PgxRower interface {
 	Values() ([]interface{}, error)
 }
 
-func (r *PgxRows) Columns() ([]string, error) {
+func (r *pgxRows) Columns() ([]string, error) {
 	fields := r.rows.FieldDescriptions()
 	columns := make([]string, len(fields))
 	for i, field := range fields {
@@ -91,16 +83,16 @@ func (r *PgxRows) Columns() ([]string, error) {
 	return columns, nil
 }
 
-func (r *PgxRows) Next() bool {
+func (r *pgxRows) Next() bool {
 	return r.rows.Next()
 }
 
-func (r *PgxRows) Close() error {
+func (r *pgxRows) Close() error {
 	r.rows.Close()
 	return nil
 }
 
-func (r *PgxRows) Scan(dest ...interface{}) error {
+func (r *pgxRows) Scan(dest ...interface{}) error {
 	vals, err := r.rows.Values()
 	if err != nil {
 		return err
@@ -111,6 +103,6 @@ func (r *PgxRows) Scan(dest ...interface{}) error {
 	return nil
 }
 
-func (r *PgxRows) Err() error {
+func (r *pgxRows) Err() error {
 	return r.rows.Err()
 }

@@ -8,16 +8,16 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-var ErrInvalidQueryType error = errors.New("Invalid query. Must be of type *SqlQuery")
-var sqlOpen Opener = &SqllibOpener{}
+var errInvalidQueryType = errors.New("Invalid query. Must be of type *SqlQuery")
+var sqllibCreate sqllibCreator = &sqllibRealCreator{}
 
-type Opener interface {
-	Open(driverName, dataSourceName string) (SqlLibBackender, error)
+type sqllibCreator interface {
+	Open(driverName, dataSourceName string) (sqlLibBackender, error)
 }
 
-type SqllibOpener struct{}
+type sqllibRealCreator struct{}
 
-func (o *SqllibOpener) Open(driverName, dataSourceName string) (SqlLibBackender, error) {
+func (o *sqllibRealCreator) Open(driverName, dataSourceName string) (sqlLibBackender, error) {
 	return sql.Open(driverName, dataSourceName)
 }
 
@@ -30,12 +30,12 @@ func NewSqlQuery(query string, args ...interface{}) *SqlQuery {
 	return &SqlQuery{query: query, args: args}
 }
 
-type SqllibBackend struct {
-	db SqlLibBackender
-	Backender
+type sqllibBackend struct {
+	db sqlLibBackender
+	backender
 }
 
-type SqlLibBackender interface {
+type sqlLibBackender interface {
 	Ping() error
 	Close() error
 	Exec(query string, args ...interface{}) (sql.Result, error)
@@ -43,16 +43,8 @@ type SqlLibBackender interface {
 	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
-func NewSqllib(driverName, connectionString string) (OneDBer, error) {
-	conn, err := newSqllibBackend(driverName, connectionString)
-	if err != nil {
-		return nil, err
-	}
-	return NewBackendConverter(conn), nil
-}
-
-func newSqllibBackend(driverName, connectionString string) (Backender, error) {
-	sqlDb, err := sqlOpen.Open(driverName, connectionString)
+func NewSqllib(driverName, connectionString string) (DBer, error) {
+	sqlDb, err := sqllibCreate.Open(driverName, connectionString)
 	if err != nil {
 		return nil, err
 	}
@@ -60,25 +52,25 @@ func newSqllibBackend(driverName, connectionString string) (Backender, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &SqllibBackend{db: sqlDb}, nil
+	return newBackendConverter(&sqllibBackend{db: sqlDb}), nil
 }
 
-func (b *SqllibBackend) Close() error {
+func (b *sqllibBackend) Close() error {
 	return b.db.Close()
 }
 
-func (b *SqllibBackend) Query(query interface{}) (RowsScanner, error) {
+func (b *sqllibBackend) Query(query interface{}) (rowsScanner, error) {
 	q, ok := query.(*SqlQuery)
 	if !ok {
-		return nil, ErrInvalidQueryType
+		return nil, errInvalidQueryType
 	}
 	return b.db.Query(q.query, q.args...)
 }
 
-func (b *SqllibBackend) QueryRow(query interface{}) Scanner {
+func (b *sqllibBackend) QueryRow(query interface{}) scanner {
 	q, ok := query.(*SqlQuery)
 	if !ok {
-		return &ErrorScanner{ErrInvalidQueryType}
+		return &errorScanner{errInvalidQueryType}
 	}
 	return b.db.QueryRow(q.query, q.args...)
 }

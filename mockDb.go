@@ -7,25 +7,29 @@ import (
 	"reflect"
 )
 
-type MockDb struct {
+type mockDb struct {
 	data     []interface{}
 	CloseErr error
 	ExecErr  error
 }
 
-func NewMock(data ...interface{}) *MockDb {
-	return &MockDb{data: data}
+func NewMock(closeErr, execErr error, data ...interface{}) DBer {
+	return &mockDb{data, closeErr, execErr}
 }
 
-func (r *MockDb) QueryJson(query interface{}) (string, error) {
-	return r.nextJson()
+func (r *mockDb) Backend() interface{} {
+	return nil
 }
 
-func (r *MockDb) QueryJsonRow(query interface{}) (string, error) {
-	return r.nextJson()
+func (r *mockDb) QueryJSON(query interface{}) (string, error) {
+	return r.nextJSON()
+}
+
+func (r *mockDb) QueryJSONRow(query interface{}) (string, error) {
+	return r.nextJSON()
 
 }
-func (r *MockDb) QueryStruct(query interface{}, result interface{}) error {
+func (r *mockDb) QueryStruct(query interface{}, result interface{}) error {
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() != reflect.Ptr || resultType.Elem().Kind() != reflect.Slice || resultType.Elem().Elem().Kind() != reflect.Struct {
 		return errors.New("result must be a pointer to a slice of structs")
@@ -36,7 +40,7 @@ func (r *MockDb) QueryStruct(query interface{}, result interface{}) error {
 	}
 	return setDest(data, result)
 }
-func (r *MockDb) QueryStructRow(query interface{}, result interface{}) error {
+func (r *mockDb) QueryStructRow(query interface{}, result interface{}) error {
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() != reflect.Ptr || resultType.Elem().Kind() != reflect.Struct {
 		return errors.New("result must be a pointer to a struct")
@@ -48,15 +52,15 @@ func (r *MockDb) QueryStructRow(query interface{}, result interface{}) error {
 	return setDest(data, result)
 }
 
-func (r *MockDb) Close() error {
+func (r *mockDb) Close() error {
 	return r.CloseErr
 }
 
-func (r *MockDb) Execute(query interface{}) error {
+func (r *mockDb) Execute(query interface{}) error {
 	return r.ExecErr
 }
 
-func (r *MockDb) nextJson() (string, error) {
+func (r *mockDb) nextJSON() (string, error) {
 	data, err := r.nextStruct()
 	if err != nil {
 		return "", err
@@ -71,7 +75,7 @@ func (r *MockDb) nextJson() (string, error) {
 	return string(output), err
 }
 
-func (r *MockDb) nextStruct() (interface{}, error) {
+func (r *mockDb) nextStruct() (interface{}, error) {
 	if len(r.data) == 0 {
 		return "", errors.New("no mock data found to return")
 	}
@@ -93,10 +97,10 @@ func setDest(source interface{}, dest interface{}) error {
 	return nil
 }
 
-type ErrorScanner struct {
+type errorScanner struct {
 	Err error
 }
 
-func (s *ErrorScanner) Scan(dest ...interface{}) error {
+func (s *errorScanner) Scan(dest ...interface{}) error {
 	return s.Err
 }

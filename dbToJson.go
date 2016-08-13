@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 )
 
-func getJson(rows RowsScanner) (string, error) {
+func getJSON(rows rowsScanner) (string, error) {
 	columns, vals, err := getColumnNamesAndValues(rows, true)
 	if err != nil {
 		return "", err
@@ -18,7 +18,7 @@ func getJson(rows RowsScanner) (string, error) {
 	writeComma := false
 	b.WriteByte('[')
 	for rows.Next() {
-		err := scanJson(rows, columns, vals, writeComma, &b)
+		err := scanJSON(rows, columns, vals, writeComma, &b)
 		if err != nil {
 			return "", err
 		}
@@ -29,7 +29,7 @@ func getJson(rows RowsScanner) (string, error) {
 	return b.String(), nil
 }
 
-func getJsonRow(rows RowsScanner) (string, error) {
+func getJSONRow(rows rowsScanner) (string, error) {
 	columns, vals, err := getColumnNamesAndValues(rows, true)
 	if err != nil {
 		return "", err
@@ -37,7 +37,7 @@ func getJsonRow(rows RowsScanner) (string, error) {
 
 	var b bytes.Buffer
 	if rows.Next() {
-		err := scanJson(rows, columns, vals, false, &b)
+		err := scanJSON(rows, columns, vals, false, &b)
 		if err != nil {
 			return "", err
 		}
@@ -46,7 +46,7 @@ func getJsonRow(rows RowsScanner) (string, error) {
 	return b.String(), nil
 }
 
-func scanJson(s Scanner, columns []string, vals []interface{}, writeComma bool, b *bytes.Buffer) error {
+func scanJSON(s scanner, columns []string, vals []interface{}, writeComma bool, b *bytes.Buffer) error {
 	if writeComma {
 		b.WriteByte(',')
 	}
@@ -57,7 +57,7 @@ func scanJson(s Scanner, columns []string, vals []interface{}, writeComma bool, 
 	}
 	firstColumn := true
 	for i := 0; i < len(vals); i++ {
-		jsonValue := getJsonValue(vals[i].(*interface{}))
+		jsonValue := getJSONValue(vals[i].(*interface{}))
 		if jsonValue != "null" {
 			if !firstColumn {
 				b.WriteByte(',')
@@ -71,7 +71,7 @@ func scanJson(s Scanner, columns []string, vals []interface{}, writeComma bool, 
 	return nil
 }
 
-func getColumnNamesAndValues(s RowsScanner, isJson bool) ([]string, []interface{}, error) {
+func getColumnNamesAndValues(s rowsScanner, isJSON bool) ([]string, []interface{}, error) {
 	if s.Err() != nil {
 		return nil, nil, s.Err()
 	}
@@ -85,7 +85,7 @@ func getColumnNamesAndValues(s RowsScanner, isJson bool) ([]string, []interface{
 	for i := 0; i < len(columnNames); i++ {
 		values[i] = new(interface{})
 
-		if isJson {
+		if isJSON {
 			columnNames[i] = jsonize(columnNames[i])
 		}
 	}
@@ -101,16 +101,15 @@ func jsonize(columnName string) string {
 	return buffer.String()
 }
 
-func getJsonValue(pval *interface{}) string {
+func getJSONValue(pval *interface{}) string {
 	switch v := (*pval).(type) {
 	case nil:
 		return "null"
 	case bool:
 		if v {
 			return "true"
-		} else {
-			return "false"
 		}
+		return "false"
 	case []byte:
 		return encodeByteSlice(v)
 	case time.Time:
