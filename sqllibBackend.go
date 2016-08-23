@@ -8,7 +8,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-var errInvalidQueryType = errors.New("Invalid query. Must be of type *SqlQuery")
+var errInvalidSqlQueryType = errors.New("Invalid query. Must be of type *SqlQuery")
 var sqllibCreate sqllibCreator = &sqllibRealCreator{}
 
 type sqllibCreator interface {
@@ -62,15 +62,7 @@ func (b *sqllibBackend) Close() error {
 func (b *sqllibBackend) Query(query interface{}) (rowsScanner, error) {
 	q, ok := query.(*SqlQuery)
 	if !ok {
-		return nil, errInvalidQueryType
+		return nil, errInvalidSqlQueryType
 	}
 	return b.db.Query(q.query, q.args...)
-}
-
-func (b *sqllibBackend) QueryRow(query interface{}) scanner {
-	q, ok := query.(*SqlQuery)
-	if !ok {
-		return &errorScanner{errInvalidQueryType}
-	}
-	return b.db.QueryRow(q.query, q.args...)
 }

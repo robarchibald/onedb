@@ -73,24 +73,6 @@ func TestSqllibQuery(t *testing.T) {
 	}
 }
 
-func TestSqllibQueryRow(t *testing.T) {
-	c := newMockSqllibBackend()
-	d := &sqllibBackend{db: c}
-	row := d.QueryRow("bogus")
-	if row.Scan(nil) == nil {
-		t.Error("expected error")
-	}
-
-	d.QueryRow(NewSqlQuery("query", "arg1", "arg2"))
-	queries := c.MethodsCalled["QueryRow"]
-	if len(c.MethodsCalled) != 1 || len(queries) != 1 ||
-		queries[0].(*SqlQuery).query != "query" ||
-		queries[0].(*SqlQuery).args[0] != "arg1" ||
-		queries[0].(*SqlQuery).args[1] != "arg2" {
-		t.Error("expected query method to be called on backend")
-	}
-}
-
 /***************************** MOCKS ****************************/
 type sqllibMockCreator struct {
 	conn sqlLibBackender

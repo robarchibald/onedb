@@ -90,7 +90,7 @@ func TestQueryStructRow(t *testing.T) {
 	}
 }
 
-func TestSet(t *testing.T) {
+func TestSetDest(t *testing.T) {
 	err := setDest("hello", &SimpleData{1, "test"})
 	if err == nil {
 		t.Error("expected error due to non-matching types")
@@ -105,11 +105,26 @@ func TestClose(t *testing.T) {
 	}
 }
 
+func TestBackend(t *testing.T) {
+	d := &mockDb{}
+	if d.Backend() != nil {
+		t.Error("expected no backend")
+	}
+}
+
 func TestExec(t *testing.T) {
 	err := errors.New("fail")
 	d := &mockDb{ExecErr: err}
 	if d.Execute("query") != err {
 		t.Error("expected error")
+	}
+}
+
+func TestErrorScannerScan(t *testing.T) {
+	err := errors.New("fail")
+	e := errorScanner{err}
+	if e.Scan() != err {
+		t.Error("expected errorScanner to return error")
 	}
 }
 

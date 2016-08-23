@@ -47,18 +47,10 @@ func (b *pgxBackend) Close() error {
 func (b *pgxBackend) Query(query interface{}) (rowsScanner, error) {
 	q, ok := query.(*SqlQuery)
 	if !ok {
-		return nil, errInvalidQueryType
+		return nil, errInvalidSqlQueryType
 	}
 	rows, _ := b.db.Query(q.query, q.args...)
 	return &pgxRows{rows: rows}, rows.Err()
-}
-
-func (b *pgxBackend) QueryRow(query interface{}) scanner {
-	q, ok := query.(*SqlQuery)
-	if !ok {
-		return &errorScanner{errInvalidQueryType}
-	}
-	return b.db.QueryRow(q.query, q.args...)
 }
 
 type pgxRows struct {

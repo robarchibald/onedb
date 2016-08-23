@@ -9,7 +9,6 @@ type backender interface {
 	Close() error
 	Execute(query interface{}) error
 	Query(query interface{}) (rowsScanner, error)
-	QueryRow(query interface{}) scanner
 }
 
 type backendConverter struct {

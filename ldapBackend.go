@@ -2,18 +2,18 @@ package onedb
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"fmt"
 
 	"gopkg.in/ldap.v2"
 )
 
+var errInvalidLdapQueryType = errors.New("Invalid query. Must be of type *ldap.SearchRequest")
+var errInvalidLdapExecType = errors.New("Invalid execute request. Must be of type *ldap.AddRequest, *ldap.DelRequest, *ldap.ModifyRequest or *ldap.PasswordModifyRequest")
 var ldapCreate ldapCreator = &ldapRealCreator{}
 
 type ldapCreator interface {
 	Dial(network, addr string) (ldapBackender, error)
-	NewSearchRequest(BaseDN string, Scope, DerefAliases, SizeLimit, TimeLimit int, TypesOnly bool, Filter string, Attributes []string, Controls []ldap.Control) *ldap.SearchRequest
 }
 
 type ldapRealCreator struct{}
@@ -22,12 +22,8 @@ func (d *ldapRealCreator) Dial(network, addr string) (ldapBackender, error) {
 	return ldap.Dial(network, addr)
 }
 
-func (d *ldapRealCreator) NewSearchRequest(baseDN string, scope, derefAliases, sizeLimit, timeLimit int, typesOnly bool, filter string, attributes []string, controls []ldap.Control) *ldap.SearchRequest {
-	return ldap.NewSearchRequest(baseDN, scope, derefAliases, sizeLimit, timeLimit, typesOnly, filter, attributes, controls)
-}
-
 type ldapBackend struct {
-	l *ldap.Conn
+	l ldapBackender
 }
 
 type ldapBackender interface {
@@ -42,7 +38,7 @@ type ldapBackender interface {
 }
 
 func NewLdap(hostname string, port int, binddn string, password string) (DBer, error) {
-	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", hostname, port))
+	l, err := ldapCreate.Dial("tcp", fmt.Sprintf("%s:%d", hostname, port))
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +51,7 @@ func NewLdap(hostname string, port int, binddn string, password string) (DBer, e
 		return nil, err
 	}
 
-	return &ldapBackend{l: l}, nil
+	return newBackendConverter(&ldapBackend{l: l}), nil
 }
 
 func (l *ldapBackend) Backend() interface{} {
@@ -68,58 +64,45 @@ func (l *ldapBackend) Close() error {
 }
 
 func (l *ldapBackend) Execute(query interface{}) error {
-	return nil
+	switch r := query.(type) {
+	case *ldap.AddRequest:
+		return l.l.Add(r)
+	case *ldap.DelRequest:
+		return l.l.Del(r)
+	case *ldap.ModifyRequest:
+		return l.l.Modify(r)
+	case *ldap.PasswordModifyRequest:
+		return l.PasswordModify(r)
+	default:
+		return errInvalidLdapExecType
+	}
 }
 
-func (l *ldapBackend) QueryJSON(query interface{}) (string, error) {
+func (l *ldapBackend) PasswordModify(r *ldap.PasswordModifyRequest) error {
+	_, err := l.l.PasswordModify(r)
+	return err
+}
+
+func (l *ldapBackend) Query(query interface{}) (rowsScanner, error) {
 	q, ok := query.(*ldap.SearchRequest)
 	if !ok {
-		return "", errInvalidQueryType
+		return nil, errInvalidLdapQueryType
 	}
-	//[]string{"uid", "userPassword", "uidNumber", "gidNumber", "homeDirectory"}
-	//baseDN, scope,     derefAliases,   sizeLimit,   timeLimit,   typesOnly,   filter,        attributes,   controls
-	req := ldapCreate.NewSearchRequest(q.BaseDN, q.Scope, q.DerefAliases, q.SizeLimit, q.TimeLimit, q.TypesOnly, q.Filter, q.Attributes, q.Controls)
-	res, err := l.l.Search(req)
+	res, err := l.l.Search(q)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	data, err := json.Marshal(res.Entries)
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
-}
-func (l *ldapBackend) QueryJSONRow(query interface{}) (string, error) {
-	q, ok := query.(*ldap.SearchRequest)
-	if !ok {
-		return "", errInvalidQueryType
-	}
-	//[]string{"uid", "userPassword", "uidNumber", "gidNumber", "homeDirectory"}
-	//baseDN, scope,     derefAliases,   sizeLimit,   timeLimit,   typesOnly,   filter,        attributes,   controls
-	req := ldapCreate.NewSearchRequest(q.BaseDN, q.Scope, q.DerefAliases, q.SizeLimit, q.TimeLimit, q.TypesOnly, q.Filter, q.Attributes, q.Controls)
-	res, err := l.l.Search(req)
-	if err != nil {
-		return "", err
-	}
-	data, err := json.Marshal(res.Entries[0])
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
-}
-func (l *ldapBackend) QueryStruct(query interface{}, result interface{}) error {
-	return nil
-}
-func (l *ldapBackend) QueryStructRow(query interface{}, result interface{}) error {
-	return nil
+	return newLdapRows(res.Entries), nil
 }
 
 type ldapRows struct {
 	rows       []*ldap.Entry
 	currentRow int
 	rowsScanner
+}
+
+func newLdapRows(rows []*ldap.Entry) *ldapRows {
+	return &ldapRows{rows: rows, currentRow: -1}
 }
 
 func (r *ldapRows) Columns() ([]string, error) {
@@ -148,8 +131,8 @@ func (r *ldapRows) Close() error {
 }
 
 func (r *ldapRows) Scan(dest ...interface{}) error {
-	if r.currentRow >= len(r.rows) {
-		return errors.New("Current Row not found")
+	if err := r.Err(); err != nil {
+		return err
 	}
 	vals := r.rows[r.currentRow].Attributes
 	for i, item := range dest {
@@ -161,6 +144,8 @@ func (r *ldapRows) Scan(dest ...interface{}) error {
 func (r *ldapRows) Err() error {
 	if r.currentRow >= len(r.rows) {
 		return errors.New("Current Row not found")
+	} else if r.currentRow < 0 {
+		return errors.New("Must call Next method before Scan")
 	}
 	return nil
 }

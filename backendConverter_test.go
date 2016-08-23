@@ -114,6 +114,14 @@ func TestBackendConverterExecute(t *testing.T) {
 	}
 }
 
+func TestBackendConverterBackend(t *testing.T) {
+	b := &mockBackend{ExecErr: errors.New("fail")}
+	db := newBackendConverter(b)
+	if b != db.Backend() {
+		t.Error("expected to get back my backend")
+	}
+}
+
 /******************** MOCKS ************************/
 var ErrRowsScannerInvalidData = errors.New("data must be a slice of structs")
 var ErrRowScannerInvalidData = errors.New("data must be a ptr to a struct")

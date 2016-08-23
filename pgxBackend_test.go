@@ -7,14 +7,14 @@ import (
 	"gopkg.in/jackc/pgx.v2"
 )
 
-func TestNewPgxOneDB(t *testing.T) {
-	pgxCreate = &MockConnPoolNewer{}
+func TestNewPgx(t *testing.T) {
+	pgxCreate = &pgxMockCreator{}
 	_, err := NewPgx("localhost", 5432, "user", "password", "database")
 	if err != nil {
 		t.Error("expected success")
 	}
 
-	pgxCreate = &MockConnPoolNewer{Err: errors.New("fail")}
+	pgxCreate = &pgxMockCreator{Err: errors.New("fail")}
 	_, err = NewPgx("localhost", 5432, "user", "password", "database")
 	if err == nil {
 		t.Error("expected fail")
@@ -33,7 +33,7 @@ func TestNewPgxOneDBRealConnection(t *testing.T) {
 }
 
 func TestPgxClose(t *testing.T) {
-	c := NewMockPgxConnector()
+	c := newMockPgx()
 	d := &pgxBackend{db: c}
 	d.Close()
 	if len(c.MethodsCalled) != 1 || len(c.MethodsCalled["Close"]) != 1 {
@@ -42,7 +42,7 @@ func TestPgxClose(t *testing.T) {
 }
 
 func TestPgxQuery(t *testing.T) {
-	c := NewMockPgxConnector()
+	c := newMockPgx()
 	d := &pgxBackend{db: c}
 	_, err := d.Query("bogus")
 	if err == nil {
@@ -59,26 +59,8 @@ func TestPgxQuery(t *testing.T) {
 	}
 }
 
-func TestPgxQueryRow(t *testing.T) {
-	c := NewMockPgxConnector()
-	d := &pgxBackend{db: c}
-	row := d.QueryRow("bogus")
-	if row.Scan(nil) == nil {
-		t.Error("expected error")
-	}
-
-	d.QueryRow(NewSqlQuery("query", "arg1", "arg2"))
-	queries := c.MethodsCalled["QueryRow"]
-	if len(c.MethodsCalled) != 1 || len(queries) != 1 ||
-		queries[0].(*SqlQuery).query != "query" ||
-		queries[0].(*SqlQuery).args[0] != "arg1" ||
-		queries[0].(*SqlQuery).args[1] != "arg2" {
-		t.Error("expected query method to be called on backend")
-	}
-}
-
 func TestPgxRowsColumns(t *testing.T) {
-	m := NewMockPgxRows()
+	m := newMockPgxRows()
 	r := &pgxRows{rows: m}
 	c, _ := r.Columns()
 	if len(m.MethodsCalled["FieldDescriptions"]) != 1 || len(c) != 2 || c[0] != "F1" || c[1] != "F2" {
@@ -87,7 +69,7 @@ func TestPgxRowsColumns(t *testing.T) {
 }
 
 func TestPgxRowsNext(t *testing.T) {
-	m := NewMockPgxRows()
+	m := newMockPgxRows()
 	r := &pgxRows{rows: m}
 
 	if r.Next() || len(m.MethodsCalled["Next"]) != 1 {
@@ -96,7 +78,7 @@ func TestPgxRowsNext(t *testing.T) {
 }
 
 func TestPgxRowsClose(t *testing.T) {
-	m := NewMockPgxRows()
+	m := newMockPgxRows()
 	r := &pgxRows{rows: m}
 	r.Close()
 	if len(m.MethodsCalled["Close"]) != 1 {
@@ -105,7 +87,7 @@ func TestPgxRowsClose(t *testing.T) {
 }
 
 func TestPgxRowsScan(t *testing.T) {
-	m := NewMockPgxRows()
+	m := newMockPgxRows()
 	r := &pgxRows{rows: m}
 	var id interface{}
 	var name interface{}
@@ -122,7 +104,7 @@ func TestPgxRowsScan(t *testing.T) {
 }
 
 func TestPgxRowsErr(t *testing.T) {
-	m := NewMockPgxRows()
+	m := newMockPgxRows()
 	r := &pgxRows{rows: m}
 	r.Err()
 	if len(m.MethodsCalled["Err"]) != 1 {
@@ -131,67 +113,67 @@ func TestPgxRowsErr(t *testing.T) {
 }
 
 /***************************** MOCKS ****************************/
-type MockConnPoolNewer struct {
+type pgxMockCreator struct {
 	connector pgxBackender
 	Err       error
 }
 
-func (c *MockConnPoolNewer) newConnPool(config pgx.ConnPoolConfig) (p pgxBackender, err error) {
+func (c *pgxMockCreator) newConnPool(config pgx.ConnPoolConfig) (p pgxBackender, err error) {
 	if c.connector == nil {
-		c.connector = NewMockPgxConnector()
+		c.connector = newMockPgx()
 	}
 	return c.connector, c.Err
 }
 
-type MockPgxBackend struct {
+type mockPgx struct {
 	MethodsCalled map[string][]interface{}
 }
 
-func NewMockPgxConnector() *MockPgxBackend {
-	return &MockPgxBackend{MethodsCalled: make(map[string][]interface{})}
+func newMockPgx() *mockPgx {
+	return &mockPgx{MethodsCalled: make(map[string][]interface{})}
 }
 
-func (c *MockPgxBackend) Close() {
+func (c *mockPgx) Close() {
 	c.MethodsCalled["Close"] = append(c.MethodsCalled["Close"], nil)
 }
-func (c *MockPgxBackend) Exec(query string, args ...interface{}) (pgx.CommandTag, error) {
+func (c *mockPgx) Exec(query string, args ...interface{}) (pgx.CommandTag, error) {
 	c.MethodsCalled["Exec"] = append(c.MethodsCalled["Exec"], NewSqlQuery(query, args...))
 	return "tag", nil
 }
-func (c *MockPgxBackend) Query(query string, args ...interface{}) (*pgx.Rows, error) {
+func (c *mockPgx) Query(query string, args ...interface{}) (*pgx.Rows, error) {
 	c.MethodsCalled["Query"] = append(c.MethodsCalled["Query"], NewSqlQuery(query, args...))
 	return &pgx.Rows{}, nil
 }
-func (c *MockPgxBackend) QueryRow(query string, args ...interface{}) *pgx.Row {
+func (c *mockPgx) QueryRow(query string, args ...interface{}) *pgx.Row {
 	c.MethodsCalled["QueryRow"] = append(c.MethodsCalled["QueryRow"], NewSqlQuery(query, args...))
 	return nil
 }
 
-type MockPgxRows struct {
+type mockPgxRows struct {
 	MethodsCalled map[string][]interface{}
 	ValuesErr     error
 }
 
-func NewMockPgxRows() *MockPgxRows {
-	return &MockPgxRows{MethodsCalled: make(map[string][]interface{})}
+func newMockPgxRows() *mockPgxRows {
+	return &mockPgxRows{MethodsCalled: make(map[string][]interface{})}
 }
 
-func (r *MockPgxRows) Close() {
+func (r *mockPgxRows) Close() {
 	r.MethodsCalled["Close"] = append(r.MethodsCalled["Close"], nil)
 }
-func (r *MockPgxRows) Err() error {
+func (r *mockPgxRows) Err() error {
 	r.MethodsCalled["Err"] = append(r.MethodsCalled["Err"], nil)
 	return nil
 }
-func (r *MockPgxRows) Next() bool {
+func (r *mockPgxRows) Next() bool {
 	r.MethodsCalled["Next"] = append(r.MethodsCalled["Next"], nil)
 	return false
 }
-func (r *MockPgxRows) FieldDescriptions() []pgx.FieldDescription {
+func (r *mockPgxRows) FieldDescriptions() []pgx.FieldDescription {
 	r.MethodsCalled["FieldDescriptions"] = append(r.MethodsCalled["FieldDescriptions"], nil)
 	return []pgx.FieldDescription{pgx.FieldDescription{Name: "F1"}, pgx.FieldDescription{Name: "F2"}}
 }
-func (r *MockPgxRows) Values() ([]interface{}, error) {
+func (r *mockPgxRows) Values() ([]interface{}, error) {
 	r.MethodsCalled["Values"] = append(r.MethodsCalled["Values"], nil)
 	return []interface{}{1234, "hello"}, r.ValuesErr
 }
