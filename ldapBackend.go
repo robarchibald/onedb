@@ -133,6 +133,8 @@ func (r *ldapRows) Close() error {
 func (r *ldapRows) Scan(dest ...interface{}) error {
 	if err := r.Err(); err != nil {
 		return err
+	} else if r.currentRow < 0 {
+		return errors.New("Must call Next method before Scan")
 	}
 	vals := r.rows[r.currentRow].Attributes
 	for i, item := range dest {
@@ -144,8 +146,6 @@ func (r *ldapRows) Scan(dest ...interface{}) error {
 func (r *ldapRows) Err() error {
 	if r.currentRow >= len(r.rows) {
 		return errors.New("Current Row not found")
-	} else if r.currentRow < 0 {
-		return errors.New("Must call Next method before Scan")
 	}
 	return nil
 }
