@@ -25,7 +25,6 @@ type pgxBackender interface {
 	Close()
 	Exec(query string, args ...interface{}) (pgx.CommandTag, error)
 	Query(query string, args ...interface{}) (*pgx.Rows, error)
-	QueryRow(query string, args ...interface{}) *pgx.Row
 }
 
 func NewPgx(server string, port uint16, username string, password string, database string) (DBer, error) {
@@ -51,6 +50,15 @@ func (b *pgxBackend) Query(query interface{}) (rowsScanner, error) {
 	}
 	rows, _ := b.db.Query(q.query, q.args...)
 	return &pgxRows{rows: rows}, rows.Err()
+}
+
+func (b *pgxBackend) Execute(command interface{}) error {
+	c, ok := command.(*SqlQuery)
+	if !ok {
+		return errInvalidSqlQueryType
+	}
+	_, err := b.db.Exec(c.query, c.args...)
+	return err
 }
 
 type pgxRows struct {

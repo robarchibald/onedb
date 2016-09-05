@@ -59,6 +59,24 @@ func TestPgxQuery(t *testing.T) {
 	}
 }
 
+func TestPgxExecute(t *testing.T) {
+	c := newMockPgx()
+	d := &pgxBackend{db: c}
+	err := d.Execute("bogus")
+	if err == nil {
+		t.Error("expected error")
+	}
+
+	d.Execute(NewSqlQuery("query", "arg1", "arg2"))
+	queries := c.MethodsCalled["Exec"]
+	if len(c.MethodsCalled) != 1 || len(queries) != 1 ||
+		queries[0].(*SqlQuery).query != "query" ||
+		queries[0].(*SqlQuery).args[0] != "arg1" ||
+		queries[0].(*SqlQuery).args[1] != "arg2" {
+		t.Error("expected Exec method to be called on backend", len(c.MethodsCalled))
+	}
+}
+
 func TestPgxRowsColumns(t *testing.T) {
 	m := newMockPgxRows()
 	r := &pgxRows{rows: m}
@@ -143,10 +161,6 @@ func (c *mockPgx) Exec(query string, args ...interface{}) (pgx.CommandTag, error
 func (c *mockPgx) Query(query string, args ...interface{}) (*pgx.Rows, error) {
 	c.MethodsCalled["Query"] = append(c.MethodsCalled["Query"], NewSqlQuery(query, args...))
 	return &pgx.Rows{}, nil
-}
-func (c *mockPgx) QueryRow(query string, args ...interface{}) *pgx.Row {
-	c.MethodsCalled["QueryRow"] = append(c.MethodsCalled["QueryRow"], NewSqlQuery(query, args...))
-	return nil
 }
 
 type mockPgxRows struct {

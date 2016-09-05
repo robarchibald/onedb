@@ -40,7 +40,6 @@ type sqlLibBackender interface {
 	Close() error
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
 func NewSqllib(driverName, connectionString string) (DBer, error) {
@@ -65,4 +64,13 @@ func (b *sqllibBackend) Query(query interface{}) (rowsScanner, error) {
 		return nil, errInvalidSqlQueryType
 	}
 	return b.db.Query(q.query, q.args...)
+}
+
+func (b *sqllibBackend) Execute(command interface{}) error {
+	c, ok := command.(*SqlQuery)
+	if !ok {
+		return errInvalidSqlQueryType
+	}
+	_, err := b.db.Exec(c.query, c.args...)
+	return err
 }
