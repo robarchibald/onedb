@@ -9,7 +9,7 @@ import (
 )
 
 var errInvalidLdapQueryType = errors.New("Invalid query. Must be of type *ldap.SearchRequest")
-var errInvalidLdapExecType = errors.New("Invalid execute request. Must be of type *ldap.AddRequest, *ldap.DelRequest, *ldap.ModifyRequest, *ldap.SimpleBindRequest or *ldap.PasswordModifyRequest")
+var errInvalidLdapExecType = errors.New("Invalid execute request. Must be of type *ldap.AddRequest, *ldap.DelRequest, *ldap.ModifyRequest or *ldap.PasswordModifyRequest")
 var ldapCreate ldapCreator = &ldapRealCreator{}
 
 type ldapCreator interface {
@@ -29,7 +29,7 @@ type ldapBackend struct {
 type ldapBackender interface {
 	StartTLS(config *tls.Config) error
 	Bind(username, password string) error
-	SimpleBind(simpleBindRequest *ldap.SimpleBindRequest) (*ldap.SimpleBindResult, error)
+	//SimpleBind(simpleBindRequest *ldap.SimpleBindRequest) (*ldap.SimpleBindResult, error)
 	Close()
 	Add(addRequest *ldap.AddRequest) error
 	Del(delRequest *ldap.DelRequest) error
@@ -75,8 +75,6 @@ func (l *ldapBackend) Execute(query interface{}) error {
 		return l.l.Modify(r)
 	case *ldap.PasswordModifyRequest:
 		return l.PasswordModify(r)
-	case *ldap.SimpleBindRequest:
-		return l.SimpleBind(r)
 	default:
 		return errInvalidLdapExecType
 	}
@@ -84,11 +82,6 @@ func (l *ldapBackend) Execute(query interface{}) error {
 
 func (l *ldapBackend) PasswordModify(r *ldap.PasswordModifyRequest) error {
 	_, err := l.l.PasswordModify(r)
-	return err
-}
-
-func (l *ldapBackend) SimpleBind(r *ldap.SimpleBindRequest) error {
-	_, err := l.l.SimpleBind(r)
 	return err
 }
 
