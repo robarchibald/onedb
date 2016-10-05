@@ -19,9 +19,7 @@ type ldapCreator interface {
 type ldapRealCreator struct{}
 
 func (d *ldapRealCreator) Dial(network, addr string) (ldapBackender, error) {
-	conn, err := ldap.Dial(network, addr)
-	conn.Debug = true
-	return conn, err
+	return ldap.Dial(network, addr)
 }
 
 type ldapBackend struct {
