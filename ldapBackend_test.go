@@ -242,6 +242,12 @@ func (l *mockLdapBackend) Bind(username, password string) error {
 	l.methodCalled("Bind", username, password)
 	return l.BindErr
 }
+
+func (l *mockLdapBackend) SimpleBind(r *ldap.SimpleBindRequest) (*ldap.SimpleBindResult, error) {
+	l.methodCalled("SimpleBind", r)
+	return nil, l.BindErr
+}
+
 func (l *mockLdapBackend) Search(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error) {
 	l.methodCalled("Search", searchRequest)
 	return l.SearchReturn, l.SearchErr
