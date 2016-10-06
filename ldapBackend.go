@@ -2,10 +2,12 @@ package onedb
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
-
 	"gopkg.in/ldap.v2"
+	"reflect"
+	"strings"
 )
 
 var errInvalidLdapQueryType = errors.New("Invalid query. Must be of type *ldap.SearchRequest")
@@ -53,7 +55,97 @@ func NewLdap(hostname string, port int, binddn string, password string) (DBer, e
 		return nil, err
 	}
 
-	return newBackendConverter(&ldapBackend{l: l}), nil
+	return &ldapBackend{l: l}, nil
+}
+
+func (c *ldapBackend) QueryJSON(query interface{}) (string, error) {
+	res, err := c.Query(query)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := json.Marshal(res.Entries)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (c *ldapBackend) QueryJSONRow(query interface{}) (string, error) {
+	res, err := c.Query(query)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := json.Marshal(res.Entries[0])
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+type fieldInfo struct {
+	Name  string
+	Index int
+}
+
+func (c *ldapBackend) QueryStruct(query interface{}, result interface{}) error {
+	resultType := reflect.TypeOf(result)
+	if result == nil || !isPointer(resultType) || !isSlice(resultType.Elem()) {
+		return errors.New("Invalid result argument.  Must be a pointer to a slice")
+	}
+
+	res, err := c.Query(query)
+	if err != nil {
+		return err
+	}
+	sliceValue := reflect.ValueOf(result).Elem() // from pointer to slice
+	itemType := sliceValue.Type().Elem()
+	fields := getFieldMap(itemType)
+	for i := range res.Entries {
+		resultValue := reflect.New(itemType)
+		row := res.Entries[i]
+		setColumns(row, fields, resultValue)
+		sliceValue.Set(reflect.Append(sliceValue, resultValue.Elem()))
+	}
+	return nil
+}
+
+func getFieldMap(itemType reflect.Type) map[string]fieldInfo {
+	fields := make(map[string]fieldInfo, itemType.NumField())
+	for i := 0; i < itemType.NumField(); i++ {
+		field := itemType.Field(i)
+		fields[strings.ToLower(field.Name)] = fieldInfo{Name: field.Name, Index: i}
+	}
+	return fields
+}
+
+func setColumns(row *ldap.Entry, fields map[string]fieldInfo, result reflect.Value) {
+	cols := row.Attributes
+	for j := range cols {
+		name := strings.ToLower(cols[j].Name)
+		vals := cols[j].Values
+		if field, ok := fields[name]; ok {
+			result.Elem().Field(field.Index).Set(reflect.ValueOf(vals))
+		}
+	}
+}
+
+func (c *ldapBackend) QueryStructRow(query interface{}, result interface{}) error {
+	if result == nil || !isPointer(reflect.TypeOf(result)) {
+		return errors.New("Invalid result argument.  Must be a pointer to a struct")
+	}
+
+	res, err := c.Query(query)
+	if err != nil {
+		return err
+	}
+	resultValue := reflect.ValueOf(result).Elem() // from pointer to struct
+	fields := getFieldMap(resultValue.Type())
+
+	row := res.Entries[0]
+	setColumns(row, fields, resultValue)
+	return nil
 }
 
 func (l *ldapBackend) Backend() interface{} {
@@ -85,69 +177,10 @@ func (l *ldapBackend) PasswordModify(r *ldap.PasswordModifyRequest) error {
 	return err
 }
 
-func (l *ldapBackend) Query(query interface{}) (rowsScanner, error) {
+func (l *ldapBackend) Query(query interface{}) (*ldap.SearchResult, error) {
 	q, ok := query.(*ldap.SearchRequest)
 	if !ok {
 		return nil, errInvalidLdapQueryType
 	}
-	res, err := l.l.Search(q)
-	if err != nil {
-		return nil, err
-	}
-	return newLdapRows(res.Entries), nil
-}
-
-type ldapRows struct {
-	rows       []*ldap.Entry
-	currentRow int
-	rowsScanner
-}
-
-func newLdapRows(rows []*ldap.Entry) *ldapRows {
-	return &ldapRows{rows: rows, currentRow: -1}
-}
-
-func (r *ldapRows) Columns() ([]string, error) {
-	if len(r.rows) == 0 {
-		return []string{}, nil
-	}
-
-	fields := r.rows[0].Attributes
-	columns := make([]string, len(fields))
-	for i, field := range fields {
-		columns[i] = field.Name
-	}
-	return columns, nil
-}
-
-func (r *ldapRows) Next() bool {
-	r.currentRow++
-	if r.currentRow >= len(r.rows) {
-		return false
-	}
-	return true
-}
-
-func (r *ldapRows) Close() error {
-	return nil
-}
-
-func (r *ldapRows) Scan(dest ...interface{}) error {
-	if err := r.Err(); err != nil {
-		return err
-	} else if r.currentRow < 0 {
-		return errors.New("Must call Next method before Scan")
-	}
-	vals := r.rows[r.currentRow].Attributes
-	for i, item := range dest {
-		*(item.(*interface{})) = vals[i].Values
-	}
-	return nil
-}
-
-func (r *ldapRows) Err() error {
-	if r.currentRow >= len(r.rows) {
-		return errors.New("Current Row not found")
-	}
-	return nil
+	return l.l.Search(q)
 }

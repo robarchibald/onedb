@@ -85,8 +85,28 @@ func TestLdapQuery(t *testing.T) {
 	entries := []*ldap.Entry{&ldap.Entry{DN: "item1"}, &ldap.Entry{DN: "item2"}}
 	m.SearchReturn = &ldap.SearchResult{Entries: entries}
 	s, err := l.Query(r)
-	if rows := s.(*ldapRows).rows; len(rows) != len(entries) || rows[0].DN != "item1" || rows[1].DN != "item2" {
+	if rows := s.Entries; len(rows) != len(entries) || rows[0].DN != "item1" || rows[1].DN != "item2" {
 		t.Error("expected rows that were passed in")
+	}
+}
+
+type ldapQueryStruct struct {
+	Test  []string
+	Test2 []string
+}
+
+func TestLdapQueryStruct(t *testing.T) {
+	m := newMockLdap()
+	a1 := ldap.EntryAttribute{Name: "Test", Values: []string{"1", "2"}}
+	a2 := ldap.EntryAttribute{Name: "Test2", Values: []string{"3", "4"}}
+	entries := []*ldap.Entry{&ldap.Entry{DN: "item1", Attributes: []*ldap.EntryAttribute{&a1, &a2}}, &ldap.Entry{DN: "item2", Attributes: []*ldap.EntryAttribute{&a2, &a1}}}
+	m.SearchReturn = &ldap.SearchResult{Entries: entries}
+	l := &ldapBackend{l: m}
+	r := ldap.NewSearchRequest("baseDn", ldap.ScopeSingleLevel, ldap.NeverDerefAliases, 0, 0, false, "filter", []string{"attributes"}, nil)
+	d := []ldapQueryStruct{}
+	err := l.QueryStruct(r, &d)
+	if err != nil || d[0].Test[0] != "1" || d[0].Test[1] != "2" || d[1].Test[0] != "1" || d[1].Test[1] != "2" || d[0].Test2[0] != "3" || d[0].Test2[1] != "4" || d[1].Test2[0] != "3" || d[1].Test2[1] != "4" {
+		t.Error("expected error", err, d)
 	}
 }
 
@@ -123,7 +143,7 @@ func TestLdapExecute(t *testing.T) {
 	}
 }
 
-func TestLdapRowsScanAndNext(t *testing.T) {
+/*func TestLdapRowsScanAndNext(t *testing.T) {
 	var uid, password, uidNumber, gidNumber, home interface{}
 	entries := []*ldap.Entry{
 		&ldap.Entry{DN: "item1", Attributes: []*ldap.EntryAttribute{
@@ -191,7 +211,7 @@ func TestLdapRowsColumns(t *testing.T) {
 	if len(cols) != 5 || cols[0] != "uid" || cols[1] != "userPassword" || cols[2] != "uidNumber" || cols[3] != "gidNumber" || cols[4] != "homeDirectory" {
 		t.Error("expected 5 columns")
 	}
-}
+}*/
 
 /***************************** MOCKS ****************************/
 type mockLdapData struct {
