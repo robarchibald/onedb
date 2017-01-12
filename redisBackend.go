@@ -80,7 +80,7 @@ func (r *redisBackend) Execute(query interface{}) error {
 		return errInvalidRedisQueryType
 	}
 	c := r.pool.Get()
-	defer r.Close()
+	defer c.Close()
 
 	_, err := c.Do(q.Command, q.Args...)
 	return err
