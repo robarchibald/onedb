@@ -122,11 +122,12 @@ func getFieldMap(itemType reflect.Type) map[string]fieldInfo {
 
 func setColumns(row *ldap.Entry, fields map[string]fieldInfo, result reflect.Value) {
 	cols := row.Attributes
+	s := result.Elem()
 	for j := range cols {
 		name := strings.ToLower(cols[j].Name)
-		vals := cols[j].Values
 		if field, ok := fields[name]; ok {
-			result.Elem().Field(field.Index).Set(reflect.ValueOf(vals))
+			vals := cols[j].Values
+			s.Field(field.Index).Set(reflect.ValueOf(vals))
 		}
 	}
 }
@@ -140,9 +141,12 @@ func (c *ldapBackend) QueryStructRow(query interface{}, result interface{}) erro
 	if err != nil {
 		return err
 	}
-	resultValue := reflect.ValueOf(result).Elem() // from pointer to struct
-	fields := getFieldMap(resultValue.Type())
+	resultValue := reflect.ValueOf(result) // from pointer to struct
+	fields := getFieldMap(resultValue.Elem().Type())
 
+	if len(res.Entries) == 0 {
+		return errors.New("No data found")
+	}
 	row := res.Entries[0]
 	setColumns(row, fields, resultValue)
 	return nil
