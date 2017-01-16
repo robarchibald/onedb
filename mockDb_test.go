@@ -99,7 +99,7 @@ func TestSetDest(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	err := errors.New("fail")
-	d := &mockDb{CloseErr: err}
+	d := &mockDb{closeErr: err}
 	if d.Close() != err {
 		t.Error("expected error")
 	}
@@ -114,7 +114,7 @@ func TestBackend(t *testing.T) {
 
 func TestExec(t *testing.T) {
 	err := errors.New("fail")
-	d := &mockDb{ExecErr: err}
+	d := &mockDb{execErr: err}
 	if d.Execute("query") != err {
 		t.Error("expected error")
 	}

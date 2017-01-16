@@ -9,12 +9,19 @@ import (
 
 type mockDb struct {
 	data     []interface{}
-	CloseErr error
-	ExecErr  error
+	queries  []interface{}
+	closeErr error
+	execErr  error
 }
 
-func NewMock(closeErr, execErr error, data ...interface{}) DBer {
-	return &mockDb{data, closeErr, execErr}
+type MockDBer interface {
+	DBer
+	QueriesRun() []interface{}
+}
+
+func NewMock(closeErr, execErr error, data ...interface{}) MockDBer {
+	queries := []interface{}{}
+	return &mockDb{data, queries, closeErr, execErr}
 }
 
 func (r *mockDb) Backend() interface{} {
@@ -22,14 +29,17 @@ func (r *mockDb) Backend() interface{} {
 }
 
 func (r *mockDb) QueryJSON(query interface{}) (string, error) {
+	r.queries = append(r.queries, query)
 	return r.nextJSON()
 }
 
 func (r *mockDb) QueryJSONRow(query interface{}) (string, error) {
+	r.queries = append(r.queries, query)
 	return r.nextJSON()
-
 }
+
 func (r *mockDb) QueryStruct(query interface{}, result interface{}) error {
+	r.queries = append(r.queries, query)
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() != reflect.Ptr || resultType.Elem().Kind() != reflect.Slice || resultType.Elem().Elem().Kind() != reflect.Struct {
 		return errors.New("result must be a pointer to a slice of structs")
@@ -40,7 +50,9 @@ func (r *mockDb) QueryStruct(query interface{}, result interface{}) error {
 	}
 	return setDest(data, result)
 }
+
 func (r *mockDb) QueryStructRow(query interface{}, result interface{}) error {
+	r.queries = append(r.queries, query)
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() != reflect.Ptr || resultType.Elem().Kind() != reflect.Struct {
 		return errors.New("result must be a pointer to a struct")
@@ -53,11 +65,16 @@ func (r *mockDb) QueryStructRow(query interface{}, result interface{}) error {
 }
 
 func (r *mockDb) Close() error {
-	return r.CloseErr
+	return r.closeErr
 }
 
 func (r *mockDb) Execute(query interface{}) error {
-	return r.ExecErr
+	r.queries = append(r.queries, query)
+	return r.execErr
+}
+
+func (r *mockDb) QueriesRun() []interface{} {
+	return r.queries
 }
 
 func (r *mockDb) nextJSON() (string, error) {
