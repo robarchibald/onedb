@@ -58,6 +58,10 @@ func NewLdap(hostname string, port int, binddn string, password string) (DBer, e
 	return &ldapBackend{l: l}, nil
 }
 
+func (c *ldapBackend) Bind(username, password string) error {
+	return c.l.Bind(username, password)
+}
+
 func (c *ldapBackend) QueryJSON(query interface{}) (string, error) {
 	res, err := c.Query(query)
 	if err != nil {
@@ -171,6 +175,8 @@ func (l *ldapBackend) Execute(query interface{}) error {
 		return l.l.Modify(r)
 	case *ldap.PasswordModifyRequest:
 		return l.PasswordModify(r)
+	case *ldap.SimpleBindRequest:
+		return l.l.Bind(r.Username, r.Password)
 	default:
 		return errInvalidLdapExecType
 	}
