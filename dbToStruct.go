@@ -1,6 +1,7 @@
 package onedb
 
 import (
+	"github.com/pkg/errors"
 	"reflect"
 	"strings"
 	"time"
@@ -26,19 +27,19 @@ func getStruct(rows rowsScanner, result interface{}) error {
 }
 
 func getStructRow(rows rowsScanner, result interface{}) error {
+	if !rows.Next() {
+		return errors.New("Empty result set")
+	}
 	columns, vals, err := getColumnNamesAndValues(rows, false)
 	if err != nil {
 		return err
 	}
 
 	_, dbToStruct := getItemTypeAndMap(columns, reflect.TypeOf(result))
-	if rows.Next() {
-		err := scanStruct(rows, vals, dbToStruct, result)
-		if err != nil {
-			return err
-		}
+	err = scanStruct(rows, vals, dbToStruct, result)
+	if err != nil {
+		return err
 	}
-
 	return nil
 }
 

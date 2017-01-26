@@ -28,6 +28,11 @@ func (r *mockDb) Backend() interface{} {
 	return nil
 }
 
+func (r *mockDb) QueryValues(query interface{}, result ...interface{}) error {
+	r.queries = append(r.queries, query)
+	return nil
+}
+
 func (r *mockDb) QueryJSON(query interface{}) (string, error) {
 	r.queries = append(r.queries, query)
 	return r.nextJSON()

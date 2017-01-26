@@ -9,6 +9,7 @@ type backender interface {
 	Close() error
 	Execute(query interface{}) error
 	Query(query interface{}) (rowsScanner, error)
+	QueryRow(query interface{}) scanner
 }
 
 type backendConverter struct {
@@ -22,6 +23,11 @@ func newBackendConverter(backend backender) DBer {
 
 func (c *backendConverter) Backend() interface{} {
 	return c.backend
+}
+
+func (c *backendConverter) QueryValues(query interface{}, result ...interface{}) error {
+	row := c.backend.QueryRow(query)
+	return row.Scan(result...)
 }
 
 func (c *backendConverter) QueryJSON(query interface{}) (string, error) {

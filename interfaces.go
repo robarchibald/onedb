@@ -16,6 +16,7 @@ type DBer interface {
 	Backend() interface{}
 	Close() error
 	Execute(query interface{}) error
+	QueryValues(query interface{}, result ...interface{}) error
 	QueryJSON(query interface{}) (string, error)
 	QueryJSONRow(query interface{}) (string, error)
 	QueryStruct(query interface{}, result interface{}) error

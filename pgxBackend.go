@@ -25,6 +25,7 @@ type pgxBackender interface {
 	Close()
 	Exec(query string, args ...interface{}) (pgx.CommandTag, error)
 	Query(query string, args ...interface{}) (*pgx.Rows, error)
+	QueryRow(query string, args ...interface{}) *pgx.Row
 }
 
 func NewPgx(server string, port uint16, username string, password string, database string) (DBer, error) {
@@ -43,12 +44,24 @@ func (b *pgxBackend) Close() error {
 	return nil
 }
 
+func (b *pgxBackend) QueryRow(query interface{}) scanner {
+	q, ok := query.(*SqlQuery)
+	if !ok {
+		return &errorScanner{}
+	}
+	row := b.db.QueryRow(q.query, q.args...)
+	return &pgxRow{row: row}
+}
+
 func (b *pgxBackend) Query(query interface{}) (rowsScanner, error) {
 	q, ok := query.(*SqlQuery)
 	if !ok {
 		return nil, errInvalidSqlQueryType
 	}
-	rows, _ := b.db.Query(q.query, q.args...)
+	rows, err := b.db.Query(q.query, q.args...)
+	if err != nil {
+		return nil, err
+	}
 	return &pgxRows{rows: rows}, rows.Err()
 }
 
@@ -61,9 +74,18 @@ func (b *pgxBackend) Execute(command interface{}) error {
 	return err
 }
 
+type pgxRow struct {
+	row scanner
+}
+
+func (r *pgxRow) Scan(dest ...interface{}) error {
+	return r.row.Scan(dest...)
+}
+
 type pgxRows struct {
 	rows pgxRower
 	rowsScanner
+	scanner
 }
 
 type pgxRower interface {

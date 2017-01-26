@@ -86,6 +86,10 @@ func (r *redisBackend) Execute(query interface{}) error {
 	return err
 }
 
+func (r *redisBackend) QueryValues(query interface{}, result ...interface{}) error {
+	return nil
+}
+
 func (r *redisBackend) QueryJSON(query interface{}) (string, error) {
 	q, ok := query.(*RedisCommand)
 	if !ok || len(q.Args) == 0 {

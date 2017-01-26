@@ -3,8 +3,8 @@ package onedb
 import (
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"gopkg.in/ldap.v2"
 	"reflect"
 	"strings"
@@ -91,6 +91,7 @@ func (c *ldapBackend) QueryJSONRow(query interface{}) (string, error) {
 type fieldInfo struct {
 	Name  string
 	Index int
+	Kind  reflect.Kind
 }
 
 func (c *ldapBackend) QueryStruct(query interface{}, result interface{}) error {
@@ -119,21 +120,54 @@ func getFieldMap(itemType reflect.Type) map[string]fieldInfo {
 	fields := make(map[string]fieldInfo, itemType.NumField())
 	for i := 0; i < itemType.NumField(); i++ {
 		field := itemType.Field(i)
-		fields[strings.ToLower(field.Name)] = fieldInfo{Name: field.Name, Index: i}
+		fields[strings.ToLower(field.Name)] = fieldInfo{Name: field.Name, Index: i, Kind: field.Type.Kind()}
 	}
 	return fields
 }
 
-func setColumns(row *ldap.Entry, fields map[string]fieldInfo, result reflect.Value) {
+func setColumns(row *ldap.Entry, fields map[string]fieldInfo, result reflect.Value) error {
 	cols := row.Attributes
 	s := result.Elem()
 	for j := range cols {
 		name := strings.ToLower(cols[j].Name)
 		if field, ok := fields[name]; ok {
-			vals := cols[j].Values
-			s.Field(field.Index).Set(reflect.ValueOf(vals))
+			if err := setRowValue(s, &field, cols[j].Values); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
+}
+
+func setRowValue(row reflect.Value, field *fieldInfo, vals []string) error {
+	if field.Kind == reflect.Slice {
+		row.Field(field.Index).Set(reflect.ValueOf(vals))
+	} else if len(vals) == 1 {
+		row.Field(field.Index).Set(reflect.ValueOf(vals[0]))
+	} else if len(vals) > 1 {
+		return fmt.Errorf("Expected single value for field: %s, but found %d", field.Name, len(vals))
+	}
+	return nil
+}
+
+func (c *ldapBackend) QueryValues(query interface{}, result ...interface{}) error {
+	if result == nil || !isPointer(reflect.TypeOf(result)) || reflect.TypeOf(result).Elem().Kind() == reflect.Struct {
+		return errors.New("Invalid result argument.  Must be a pointer to a primitive type")
+	}
+
+	res, err := c.Query(query)
+	if err != nil {
+		return err
+	}
+
+	if len(res.Entries) != 1 || len(res.Entries[0].Attributes) != len(result) {
+		return errors.Errorf("Expected 1 row and %d column of data. Found %d row(s) and %d column(s)", len(result), len(res.Entries), len(res.Entries[0].Attributes))
+	}
+	for i := 0; i < len(result); i++ {
+		setRowValue(reflect.ValueOf(result[i]), &fieldInfo{Kind: reflect.Invalid}, res.Entries[0].Attributes[i].Values)
+	}
+	reflect.ValueOf(result).Set(reflect.ValueOf(res.Entries[0].Attributes[0].Values[0]))
+	return nil
 }
 
 func (c *ldapBackend) QueryStructRow(query interface{}, result interface{}) error {

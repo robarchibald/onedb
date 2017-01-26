@@ -2,9 +2,8 @@ package onedb
 
 import (
 	"errors"
-	"testing"
-
 	"gopkg.in/jackc/pgx.v2"
+	"testing"
 )
 
 func TestNewPgx(t *testing.T) {
@@ -163,6 +162,11 @@ func (c *mockPgx) Query(query string, args ...interface{}) (*pgx.Rows, error) {
 	return &pgx.Rows{}, nil
 }
 
+func (c *mockPgx) QueryRow(query string, args ...interface{}) *pgx.Row {
+	c.MethodsCalled["QueryRow"] = append(c.MethodsCalled["QueryRow"], NewSqlQuery(query, args...))
+	return &pgx.Row{}
+}
+
 type mockPgxRows struct {
 	MethodsCalled map[string][]interface{}
 	ValuesErr     error
@@ -190,4 +194,8 @@ func (r *mockPgxRows) FieldDescriptions() []pgx.FieldDescription {
 func (r *mockPgxRows) Values() ([]interface{}, error) {
 	r.MethodsCalled["Values"] = append(r.MethodsCalled["Values"], nil)
 	return []interface{}{1234, "hello"}, r.ValuesErr
+}
+func (r *mockPgxRows) Scan(result ...interface{}) error {
+	r.MethodsCalled["Scan"] = append(r.MethodsCalled["Scan"], nil)
+	return r.ValuesErr
 }
