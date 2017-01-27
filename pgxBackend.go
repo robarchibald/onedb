@@ -2,9 +2,12 @@ package onedb
 
 import (
 	"gopkg.in/jackc/pgx.v2"
+	"net"
+	"time"
 )
 
 var pgxCreate pgxCreator = &pgxRealCreator{}
+var dialHelper dialer = &realDialer{}
 
 type pgxCreator interface {
 	newConnPool(config pgx.ConnPoolConfig) (p pgxBackender, err error)
@@ -14,6 +17,30 @@ type pgxRealCreator struct{}
 
 func (c *pgxRealCreator) newConnPool(config pgx.ConnPoolConfig) (p pgxBackender, err error) {
 	return pgx.NewConnPool(config)
+}
+
+type dialer interface {
+	Dial(network, addr string) (net.Conn, error)
+}
+
+type realDialer struct{}
+
+func (d *realDialer) Dial(network, addr string) (net.Conn, error) {
+	tcpAddr, err := net.ResolveTCPAddr(network, addr)
+	if err != nil {
+		return nil, err
+	}
+	tc, err := net.DialTCP(network, nil, tcpAddr)
+	if err != nil {
+		return nil, err
+	}
+	if err := tc.SetKeepAlive(true); err != nil {
+		return nil, err
+	}
+	if err := tc.SetKeepAlivePeriod(2 * time.Minute); err != nil {
+		return nil, err
+	}
+	return tc, nil
 }
 
 type pgxBackend struct {
@@ -29,7 +56,7 @@ type pgxBackender interface {
 }
 
 func NewPgx(server string, port uint16, username string, password string, database string) (DBer, error) {
-	connConfig := pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database}
+	connConfig := pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database, Dial: dialHelper.Dial}
 	poolConfig := pgx.ConnPoolConfig{ConnConfig: connConfig, MaxConnections: 10}
 	pgxDb, err := pgxCreate.newConnPool(poolConfig)
 	if err != nil {

@@ -4,32 +4,31 @@ import (
 	"crypto/tls"
 	"errors"
 	"gopkg.in/ldap.v2"
+	"net"
 	"testing"
 )
 
 func TestNewLdap(t *testing.T) {
+	dialHelper = &mockDialer{}
 	ldapCreate = &ldapMockCreator{}
 	_, err := NewLdap("localhost", 389, "user", "password")
 	if err != nil {
-		t.Error("expected success")
+		t.Error("expected success", err)
 	}
 
-	ldapCreate = &ldapMockCreator{Err: errors.New("fail")}
+	dialHelper = &mockDialer{Err: errors.New("fail")}
 	_, err = NewLdap("localhost", 389, "user", "password")
 	if err == nil {
 		t.Error("expected fail")
 	}
 
-	l := newMockLdap()
-	l.StartTLSErr = errors.New("Fail")
-	ldapCreate = &ldapMockCreator{conn: l}
+	ldapCreate = &ldapMockCreator{StartTLSErr: errors.New("fail")}
 	_, err = NewLdap("localhost", 389, "user", "password")
 	if err == nil {
 		t.Error("expected fail on StartTLS")
 	}
 
-	l.StartTLSErr = nil
-	l.BindErr = errors.New("fail")
+	ldapCreate = &ldapMockCreator{BindErr: errors.New("fail")}
 	_, err = NewLdap("localhost", 389, "user", "password")
 	if err == nil {
 		t.Error("Expected Bind error")
@@ -223,15 +222,12 @@ type mockLdapData struct {
 }
 
 type ldapMockCreator struct {
-	conn ldapBackender
-	Err  error
+	StartTLSErr error
+	BindErr     error
 }
 
-func (l *ldapMockCreator) Dial(network, addr string) (ldapBackender, error) {
-	if l.conn == nil && l.Err == nil {
-		l.conn = newMockLdap()
-	}
-	return l.conn, l.Err
+func (l *ldapMockCreator) NewConn(conn net.Conn, isTLS bool) ldapBackender {
+	return &mockLdapBackend{MethodsCalled: make(map[string][]interface{}), StartTLSErr: l.StartTLSErr, BindErr: l.BindErr}
 }
 
 type mockLdapBackend struct {
@@ -252,6 +248,9 @@ func newMockLdap() *mockLdapBackend {
 
 func (l *mockLdapBackend) Close() {
 	l.methodCalled("Close", nil)
+}
+func (l *mockLdapBackend) Start() {
+	l.methodCalled("Start", nil)
 }
 func (l *mockLdapBackend) StartTLS(config *tls.Config) error {
 	l.methodCalled("StartTLS", config)

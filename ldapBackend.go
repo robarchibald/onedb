@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"gopkg.in/ldap.v2"
+	"net"
 	"reflect"
 	"strings"
 )
@@ -15,13 +16,13 @@ var errInvalidLdapExecType = errors.New("Invalid execute request. Must be of typ
 var ldapCreate ldapCreator = &ldapRealCreator{}
 
 type ldapCreator interface {
-	Dial(network, addr string) (ldapBackender, error)
+	NewConn(conn net.Conn, isTLS bool) ldapBackender
 }
 
 type ldapRealCreator struct{}
 
-func (d *ldapRealCreator) Dial(network, addr string) (ldapBackender, error) {
-	return ldap.Dial(network, addr)
+func (d *ldapRealCreator) NewConn(conn net.Conn, isTLS bool) ldapBackender {
+	return ldap.NewConn(conn, isTLS)
 }
 
 type ldapBackend struct {
@@ -29,6 +30,7 @@ type ldapBackend struct {
 }
 
 type ldapBackender interface {
+	Start()
 	StartTLS(config *tls.Config) error
 	Bind(username, password string) error
 	//SimpleBind(simpleBindRequest *ldap.SimpleBindRequest) (*ldap.SimpleBindResult, error)
@@ -42,11 +44,12 @@ type ldapBackender interface {
 }
 
 func NewLdap(hostname string, port int, binddn string, password string) (DBer, error) {
-	l, err := ldapCreate.Dial("tcp", fmt.Sprintf("%s:%d", hostname, port))
+	tc, err := dialHelper.Dial("tcp", fmt.Sprintf("%s:%d", hostname, port))
 	if err != nil {
 		return nil, err
 	}
-
+	l := ldapCreate.NewConn(tc, false)
+	l.Start()
 	if err = l.StartTLS(&tls.Config{ServerName: hostname}); err != nil {
 		return nil, err
 	}

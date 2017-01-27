@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"strconv"
+	"time"
 )
 
 var errInvalidRedisQueryType = errors.New("Invalid query. Must be of type *RedisCommand")
@@ -20,14 +21,23 @@ type redisCreator interface {
 type redisRealCreator struct{}
 
 func (c *redisRealCreator) newConnPool(server string, port int, password string, maxIdle, maxConnections int) redisBackender {
+	const timeout = 2 * time.Second
 	return &redis.Pool{
 		MaxIdle:   maxIdle,
 		MaxActive: maxConnections,
 		Dial: func() (redis.Conn, error) {
-			if password != "" {
-				return redis.Dial("tcp", fmt.Sprintf("%s:%d", server, port), redis.DialPassword(password))
+			tc, err := dialHelper.Dial("tcp", fmt.Sprintf("%s:%d", server, port))
+			if err != nil {
+				return nil, err
 			}
-			return redis.Dial("tcp", fmt.Sprintf("%s:%d", server, port))
+			c := redis.NewConn(tc, timeout, timeout)
+			if password != "" {
+				if _, err := c.Do("AUTH", password); err != nil {
+					c.Close()
+					return nil, err
+				}
+			}
+			return c, nil
 		},
 	}
 }

@@ -3,6 +3,7 @@ package onedb
 import (
 	"errors"
 	"gopkg.in/jackc/pgx.v2"
+	"net"
 	"testing"
 )
 
@@ -130,6 +131,14 @@ func TestPgxRowsErr(t *testing.T) {
 }
 
 /***************************** MOCKS ****************************/
+type mockDialer struct {
+	Err error
+}
+
+func (d *mockDialer) Dial(network, addr string) (net.Conn, error) {
+	return nil, d.Err
+}
+
 type pgxMockCreator struct {
 	connector pgxBackender
 	Err       error
