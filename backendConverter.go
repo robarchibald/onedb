@@ -1,7 +1,7 @@
 package onedb
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"reflect"
 )
 

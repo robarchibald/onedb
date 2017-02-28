@@ -2,6 +2,7 @@ package onedb
 
 import (
 	"gopkg.in/jackc/pgx.v2"
+	"math"
 	"net"
 	"time"
 )
@@ -44,7 +45,8 @@ func (d *realDialer) Dial(network, addr string) (net.Conn, error) {
 }
 
 type pgxBackend struct {
-	db pgxBackender
+	db         pgxBackender
+	retryCount int
 	backender
 }
 
@@ -86,7 +88,10 @@ func (b *pgxBackend) Query(query interface{}) (rowsScanner, error) {
 		return nil, errInvalidSqlQueryType
 	}
 	rows, err := b.db.Query(q.query, q.args...)
-	if err != nil {
+	if err == pgx.ErrDeadConn {
+		b.reconnect()
+		return b.Query(query)
+	} else if err != nil {
 		return nil, err
 	}
 	return &pgxRows{rows: rows}, rows.Err()
@@ -98,7 +103,17 @@ func (b *pgxBackend) Execute(command interface{}) error {
 		return errInvalidSqlQueryType
 	}
 	_, err := b.db.Exec(c.query, c.args...)
+	if err == pgx.ErrDeadConn {
+		b.reconnect()
+		return b.Execute(command)
+	}
 	return err
+}
+
+func (b *pgxBackend) reconnect() { // connection pool resets bad connection so no need to reset
+	ms := math.Pow10(b.retryCount) // 10^retryCount milliseconds each time (e.g. 1, 10, 100)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+	b.retryCount++
 }
 
 type pgxRow struct {

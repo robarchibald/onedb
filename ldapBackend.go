@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"gopkg.in/ldap.v2"
+	"math"
 	"net"
 	"reflect"
 	"strings"
+	"time"
 )
 
 var errInvalidLdapQueryType = errors.New("Invalid query. Must be of type *ldap.SearchRequest")
@@ -26,7 +28,12 @@ func (d *ldapRealCreator) NewConn(conn net.Conn, isTLS bool) ldapBackender {
 }
 
 type ldapBackend struct {
-	l ldapBackender
+	l          ldapBackender
+	retryCount int
+	hostname   string
+	port       int
+	binddn     string
+	password   string
 }
 
 type ldapBackender interface {
@@ -44,6 +51,14 @@ type ldapBackender interface {
 }
 
 func NewLdap(hostname string, port int, binddn string, password string) (DBer, error) {
+	l, err := ldapConnect(hostname, port, binddn, password)
+	if err != nil {
+		return nil, err
+	}
+	return &ldapBackend{l: l, hostname: hostname, port: port, binddn: binddn, password: password}, nil
+}
+
+func ldapConnect(hostname string, port int, binddn string, password string) (ldapBackender, error) {
 	tc, err := dialHelper.Dial("tcp", fmt.Sprintf("%s:%d", hostname, port))
 	if err != nil {
 		return nil, err
@@ -58,7 +73,7 @@ func NewLdap(hostname string, port int, binddn string, password string) (DBer, e
 		return nil, err
 	}
 
-	return &ldapBackend{l: l}, nil
+	return l, nil
 }
 
 func (c *ldapBackend) Bind(username, password string) error {
@@ -203,24 +218,25 @@ func (l *ldapBackend) Close() error {
 }
 
 func (l *ldapBackend) Execute(query interface{}) error {
+	var err error
 	switch r := query.(type) {
 	case *ldap.AddRequest:
-		return l.l.Add(r)
+		err = l.l.Add(r)
 	case *ldap.DelRequest:
-		return l.l.Del(r)
+		err = l.l.Del(r)
 	case *ldap.ModifyRequest:
-		return l.l.Modify(r)
+		err = l.l.Modify(r)
 	case *ldap.PasswordModifyRequest:
-		return l.PasswordModify(r)
+		_, err = l.l.PasswordModify(r)
 	case *ldap.SimpleBindRequest:
-		return l.l.Bind(r.Username, r.Password)
+		err = l.l.Bind(r.Username, r.Password)
 	default:
-		return errInvalidLdapExecType
+		err = errInvalidLdapExecType
 	}
-}
-
-func (l *ldapBackend) PasswordModify(r *ldap.PasswordModifyRequest) error {
-	_, err := l.l.PasswordModify(r)
+	if err != nil && err.Error() == "ldap: connection closed" && l.retryCount < 3 {
+		l.reconnect()
+		return l.Execute(query)
+	}
 	return err
 }
 
@@ -229,5 +245,17 @@ func (l *ldapBackend) Query(query interface{}) (*ldap.SearchResult, error) {
 	if !ok {
 		return nil, errInvalidLdapQueryType
 	}
-	return l.l.Search(q)
+	res, err := l.l.Search(q)
+	if err != nil && err.Error() == "ldap: connection closed" && l.retryCount < 3 {
+		l.reconnect()
+		return l.Query(query)
+	}
+	return res, err
+}
+
+func (l *ldapBackend) reconnect() {
+	ms := math.Pow10(l.retryCount) // 10^retryCount milliseconds each time (e.g. 1, 10, 100)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+	l.l, _ = ldapConnect(l.hostname, l.port, l.binddn, l.password)
+	l.retryCount++
 }
