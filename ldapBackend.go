@@ -259,7 +259,7 @@ func (l *ldapBackend) reconnect() bool {
 		l.l, err = ldapConnect(l.hostname, l.port, l.binddn, l.password)
 		if err == nil {
 			l.retryCount = 0
-		} else if l.retryCount <= 6 { // don't retry any less frequently than every 100 seconds
+		} else if l.retryCount <= 4 { // max retry time is 10 seconds
 			l.retryCount++
 		}
 		l.lastRetry = time.Now()

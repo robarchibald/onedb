@@ -127,7 +127,7 @@ func (b *pgxBackend) reconnect() bool {
 		err := b.ping()
 		if err == nil {
 			b.retryCount = 0
-		} else if b.retryCount <= 6 { // don't retry any less frequently than every 100 seconds
+		} else if b.retryCount <= 4 { // max retry time is 10 seconds
 			b.retryCount++
 		}
 		b.lastRetry = time.Now()
