@@ -29,6 +29,7 @@ func (d *ldapRealCreator) NewConn(conn net.Conn, isTLS bool) ldapBackender {
 
 type ldapBackend struct {
 	l          ldapBackender
+	lastRetry  time.Time
 	retryCount int
 	hostname   string
 	port       int
@@ -233,8 +234,7 @@ func (l *ldapBackend) Execute(query interface{}) error {
 	default:
 		err = errInvalidLdapExecType
 	}
-	if err != nil && err.Error() == "ldap: connection closed" && l.retryCount < 3 {
-		l.reconnect()
+	if err != nil && err.Error() == "ldap: connection closed" && l.reconnect() {
 		return l.Execute(query)
 	}
 	return err
@@ -246,16 +246,24 @@ func (l *ldapBackend) Query(query interface{}) (*ldap.SearchResult, error) {
 		return nil, errInvalidLdapQueryType
 	}
 	res, err := l.l.Search(q)
-	if err != nil && err.Error() == "ldap: connection closed" && l.retryCount < 3 {
-		l.reconnect()
+	if err != nil && err.Error() == "ldap: connection closed" && l.reconnect() {
 		return l.Query(query)
 	}
 	return res, err
 }
 
-func (l *ldapBackend) reconnect() {
-	ms := math.Pow10(l.retryCount) // 10^retryCount milliseconds each time (e.g. 1, 10, 100)
-	time.Sleep(time.Duration(ms) * time.Millisecond)
-	l.l, _ = ldapConnect(l.hostname, l.port, l.binddn, l.password)
-	l.retryCount++
+func (l *ldapBackend) reconnect() bool {
+	var err error
+	ms := time.Millisecond * time.Duration(math.Pow10(l.retryCount)) // retry every 10^lastRetry milliseconds
+	if time.Since(l.lastRetry) > ms {
+		l.l, err = ldapConnect(l.hostname, l.port, l.binddn, l.password)
+		if err == nil {
+			l.retryCount = 0
+		} else if l.retryCount <= 6 { // don't retry any less frequently than every 100 seconds
+			l.retryCount++
+		}
+		l.lastRetry = time.Now()
+		return true
+	}
+	return false
 }

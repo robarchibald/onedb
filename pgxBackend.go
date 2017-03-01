@@ -1,6 +1,7 @@
 package onedb
 
 import (
+	"github.com/pkg/errors"
 	"gopkg.in/jackc/pgx.v2"
 	"math"
 	"net"
@@ -46,6 +47,7 @@ func (d *realDialer) Dial(network, addr string) (net.Conn, error) {
 
 type pgxBackend struct {
 	db         pgxBackender
+	lastRetry  time.Time
 	retryCount int
 	backender
 }
@@ -88,8 +90,7 @@ func (b *pgxBackend) Query(query interface{}) (rowsScanner, error) {
 		return nil, errInvalidSqlQueryType
 	}
 	rows, err := b.db.Query(q.query, q.args...)
-	if err == pgx.ErrDeadConn {
-		b.reconnect()
+	if err == pgx.ErrDeadConn && b.reconnect() {
 		return b.Query(query)
 	} else if err != nil {
 		return nil, err
@@ -103,17 +104,36 @@ func (b *pgxBackend) Execute(command interface{}) error {
 		return errInvalidSqlQueryType
 	}
 	_, err := b.db.Exec(c.query, c.args...)
-	if err == pgx.ErrDeadConn {
-		b.reconnect()
+	if err == pgx.ErrDeadConn && b.reconnect() {
 		return b.Execute(command)
 	}
 	return err
 }
 
-func (b *pgxBackend) reconnect() { // connection pool resets bad connection so no need to reset
-	ms := math.Pow10(b.retryCount) // 10^retryCount milliseconds each time (e.g. 1, 10, 100)
-	time.Sleep(time.Duration(ms) * time.Millisecond)
-	b.retryCount++
+func (b *pgxBackend) ping() error {
+	var val int
+	if err := b.db.QueryRow("select 1 + 1").Scan(&val); err != nil {
+		return err
+	}
+	if val != 2 {
+		return errors.New("Failed ping test")
+	}
+	return nil
+}
+
+func (b *pgxBackend) reconnect() bool {
+	ms := time.Millisecond * time.Duration(math.Pow10(b.retryCount)) // retry every 10^lastRetry milliseconds
+	if time.Since(b.lastRetry) > ms {
+		err := b.ping()
+		if err == nil {
+			b.retryCount = 0
+		} else if b.retryCount <= 6 { // don't retry any less frequently than every 100 seconds
+			b.retryCount++
+		}
+		b.lastRetry = time.Now()
+		return true
+	}
+	return false
 }
 
 type pgxRow struct {
