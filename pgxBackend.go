@@ -5,6 +5,7 @@ import (
 	"gopkg.in/jackc/pgx.v2"
 	"math"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -90,7 +91,7 @@ func (b *pgxBackend) Query(query interface{}) (rowsScanner, error) {
 		return nil, errInvalidSqlQueryType
 	}
 	rows, err := b.db.Query(q.query, q.args...)
-	if err == pgx.ErrDeadConn && b.reconnect() {
+	if (err == pgx.ErrDeadConn || err != nil && strings.HasSuffix(err.Error(), "connection reset by peer")) && b.reconnect() {
 		return b.Query(query)
 	} else if err != nil {
 		return nil, err
@@ -104,7 +105,7 @@ func (b *pgxBackend) Execute(command interface{}) error {
 		return errInvalidSqlQueryType
 	}
 	_, err := b.db.Exec(c.query, c.args...)
-	if err == pgx.ErrDeadConn && b.reconnect() {
+	if (err == pgx.ErrDeadConn || err != nil && strings.HasSuffix(err.Error(), "connection reset by peer")) && b.reconnect() {
 		return b.Execute(command)
 	}
 	return err
