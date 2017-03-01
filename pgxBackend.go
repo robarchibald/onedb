@@ -124,14 +124,14 @@ func (b *pgxBackend) ping() error {
 func (b *pgxBackend) reconnect() bool {
 	ms := time.Millisecond * time.Duration(math.Pow10(b.retryCount)) // retry every 10^lastRetry milliseconds
 	if time.Since(b.lastRetry) > ms {
+		b.lastRetry = time.Now()
 		err := b.ping()
 		if err == nil {
 			b.retryCount = 0
-		} else if b.retryCount <= 4 { // max retry time is 10 seconds
+			return true
+		} else if b.retryCount < 4 { // max retry time is 10 seconds
 			b.retryCount++
 		}
-		b.lastRetry = time.Now()
-		return true
 	}
 	return false
 }
