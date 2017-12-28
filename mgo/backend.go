@@ -16,6 +16,11 @@ func Dial(url string) (Sessioner, error) {
 	return &msession{s}, nil
 }
 
+var (
+	ErrNotFound = mgo.ErrNotFound
+	ErrCursor   = mgo.ErrCursor
+)
+
 // Sessioner is the public interface for *mgo.Session to enable mocking
 type Sessioner interface {
 	BuildInfo() (info mgo.BuildInfo, err error)
