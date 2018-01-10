@@ -437,8 +437,3 @@ type Piper interface {
 	One(result interface{}) error
 	Explain(result interface{}) error
 }
-
-func testme() {
-	s := &mgo.Session{}
-	s.DB("string").C("name")
-}
