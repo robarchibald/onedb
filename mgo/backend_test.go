@@ -9,5 +9,7 @@ func TestConnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Fatal(s.DB("edi").C("edi").Count())
+	if _, err := s.DB("edi").C("edi").Count(); err != nil {
+		t.Fatal(err)
+	}
 }

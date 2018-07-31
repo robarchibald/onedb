@@ -11,8 +11,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-type sessionMap map[string]dbMap
-type dbMap map[string][]query
+type sessionToDBMap map[string]*fakeDatabase
+type dbToCollectionMap map[string]*fakeCollection
 
 // FakeMongoQuery is a struct which holds return values for queries
 type FakeMongoQuery struct {
@@ -29,21 +29,37 @@ type query struct {
 
 // NewFakeSession creates a fake mgo.Sessioner for mocking purposes
 func NewFakeSession(queryResults []FakeMongoQuery) (Sessioner, error) {
-	smap := make(sessionMap)
+	smap := make(sessionToDBMap)
 	for i := range queryResults {
 		r := queryResults[i]
-		d, ok := smap[r.DB]
-		if !ok {
-			d = make(dbMap)
-			smap[r.DB] = d
-		}
-		smap[r.DB][r.Collection] = append(d[r.Collection], query{r.Query, r.Return})
+		d := getDatabase(smap, r.DB)
+		c := getCollection(d, r.Collection)
+		c.q = append(c.q, query{r.Query, r.Return})
+		fmt.Println(smap, c.q)
 	}
 	return &fakeSession{smap}, nil
 }
 
+func getDatabase(smap sessionToDBMap, dbName string) *fakeDatabase {
+	d, ok := smap[dbName]
+	if !ok {
+		d = &fakeDatabase{make(dbToCollectionMap)}
+		smap[dbName] = d
+	}
+	return d
+}
+
+func getCollection(db *fakeDatabase, collectionName string) *fakeCollection {
+	c, ok := db.collections[collectionName]
+	if !ok {
+		c = &fakeCollection{}
+		db.collections[collectionName] = c
+	}
+	return c
+}
+
 type fakeSession struct {
-	data sessionMap
+	data sessionToDBMap
 }
 
 func (s *fakeSession) BuildInfo() (info mgo.BuildInfo, err error) { return mgo.BuildInfo{}, nil }
@@ -60,9 +76,9 @@ func (s *fakeSession) DatabaseNames() (names []string, err error) {
 func (s *fakeSession) DB(name string) Databaser {
 	db, ok := s.data[name]
 	if ok {
-		return &fakeDatabase{db}
+		return db
 	}
-	return &fakeDatabase{make(dbMap)}
+	return &fakeDatabase{make(dbToCollectionMap)}
 }
 func (s *fakeSession) EnsureSafe(safe *mgo.Safe) {}
 func (s *fakeSession) FindRef(ref *mgo.DBRef) Querier {
@@ -93,20 +109,20 @@ func (s *fakeSession) SetSocketTimeout(d time.Duration)              {}
 func (s *fakeSession) SetSyncTimeout(d time.Duration)                {}
 
 type fakeDatabase struct {
-	d dbMap
+	collections dbToCollectionMap
 }
 
 func (d *fakeDatabase) AddUser(username, password string, readOnly bool) error { return nil }
 func (d *fakeDatabase) C(name string) Collectioner {
-	c, ok := d.d[name]
+	c, ok := d.collections[name]
 	if ok {
-		return &fakeCollection{c}
+		return c
 	}
-	return &fakeCollection{[]query{}}
+	return &fakeCollection{[]query{}, []methodCall{}}
 }
 func (d *fakeDatabase) CollectionNames() (names []string, err error) {
 	var n []string
-	for key := range d.d {
+	for key := range d.collections {
 		n = append(n, key)
 	}
 	return n, nil
@@ -123,18 +139,49 @@ func (d *fakeDatabase) Run(cmd interface{}, result interface{}) error { return n
 func (d *fakeDatabase) UpsertUser(user *mgo.User) error               { return nil }
 func (d *fakeDatabase) With(s *mgo.Session) Databaser                 { return d }
 
-type fakeCollection struct {
-	q []query
+type methodCall struct {
+	Name string
+	Args []interface{}
 }
 
-func (c *fakeCollection) Count() (n int, err error)             { return -1, nil }
-func (c *fakeCollection) Create(info *mgo.CollectionInfo) error { return nil }
-func (c *fakeCollection) DropCollection() error                 { return nil }
-func (c *fakeCollection) DropIndex(key ...string) error         { return nil }
-func (c *fakeCollection) DropIndexName(name string) error       { return nil }
-func (c *fakeCollection) EnsureIndex(index mgo.Index) error     { return nil }
-func (c *fakeCollection) EnsureIndexKey(key ...string) error    { return nil }
-func (c *fakeCollection) Find(query interface{}) Querier {
+func newMethodCall(name string, args ...interface{}) *methodCall {
+	return &methodCall{Name: name, Args: args}
+}
+
+type fakeCollection struct {
+	q             []query
+	methodsCalled []methodCall
+}
+
+func (c *fakeCollection) Count() (n int, err error) {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Count"))
+	return -1, nil
+}
+func (c *fakeCollection) Create(info *mgo.CollectionInfo) error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Create", info))
+	return nil
+}
+func (c *fakeCollection) DropCollection() error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("DropCollection"))
+	return nil
+}
+func (c *fakeCollection) DropIndex(key ...string) error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("DropIndex", key))
+	return nil
+}
+func (c *fakeCollection) DropIndexName(name string) error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("DropIndexName", name))
+	return nil
+}
+func (c *fakeCollection) EnsureIndex(index mgo.Index) error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("EnsureIndex", index))
+	return nil
+}
+func (c *fakeCollection) EnsureIndexKey(key ...string) error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("EnsureIndexKey", key))
+	return nil
+}
+func (c *fakeCollection) find(query interface{}) Querier {
 	for i := range c.q {
 		if reflect.DeepEqual(c.q[i].Query, query) {
 			return &fakeQuery{c.q[i].Return}
@@ -142,33 +189,70 @@ func (c *fakeCollection) Find(query interface{}) Querier {
 	}
 	return &fakeQuery{}
 }
-func (c *fakeCollection) FindId(id interface{}) Querier                         { return c.Find(id) }
-func (c *fakeCollection) Insert(docs ...interface{}) error                      { return nil }
-func (c *fakeCollection) Update(selector interface{}, update interface{}) error { return nil }
-func (c *fakeCollection) UpdateId(id interface{}, update interface{}) error     { return nil }
+func (c *fakeCollection) Find(query interface{}) Querier {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Find", query))
+	return c.find(query)
+}
+func (c *fakeCollection) FindId(id interface{}) Querier {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("FindId", id))
+	return c.find(id)
+}
+func (c *fakeCollection) Insert(docs ...interface{}) error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Insert", docs))
+	return nil
+}
+func (c *fakeCollection) Update(selector interface{}, update interface{}) error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Update", selector, update))
+	return nil
+}
+func (c *fakeCollection) UpdateId(id interface{}, update interface{}) error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("UpdateId", id, update))
+	return nil
+}
 func (c *fakeCollection) UpdateAll(selector interface{}, update interface{}) (info *mgo.ChangeInfo, err error) {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("UpdateAll", selector, update))
 	return nil, nil
 }
 func (c *fakeCollection) Upsert(selector interface{}, update interface{}) (info *mgo.ChangeInfo, err error) {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Upsert", selector, update))
 	return nil, nil
 }
 func (c *fakeCollection) UpsertId(id interface{}, update interface{}) (info *mgo.ChangeInfo, err error) {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("UpsertId", id, update))
 	return nil, nil
 }
-func (c *fakeCollection) Remove(selector interface{}) error { return nil }
-func (c *fakeCollection) RemoveId(id interface{}) error     { return nil }
+func (c *fakeCollection) Remove(selector interface{}) error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Remove", selector))
+	return nil
+}
+func (c *fakeCollection) RemoveId(id interface{}) error {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("RemoveId", id))
+	return nil
+}
 func (c *fakeCollection) RemoveAll(selector interface{}) (info *mgo.ChangeInfo, err error) {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("RemoveAll", selector))
 	return nil, nil
 }
 func (c *fakeCollection) Indexes() (indexes []mgo.Index, err error) {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Indexes"))
 	return nil, nil
 }
 func (c *fakeCollection) NewIter(session *mgo.Session, firstBatch []bson.Raw, cursorId int64, err error) Iterator {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("NewIter", session, firstBatch, cursorId, err))
 	return nil
 }
-func (c *fakeCollection) Pipe(pipeline interface{}) *mgo.Pipe { return nil }
-func (c *fakeCollection) Repair() Iterator                    { return nil }
-func (c *fakeCollection) With(s *mgo.Session) Collectioner    { return c }
+func (c *fakeCollection) Pipe(pipeline interface{}) *mgo.Pipe {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Pipe", pipeline))
+	return nil
+}
+func (c *fakeCollection) Repair() Iterator {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Repair"))
+	return nil
+}
+func (c *fakeCollection) With(s *mgo.Session) Collectioner {
+	c.methodsCalled = append(c.methodsCalled, *newMethodCall("With", s))
+	return c
+}
 
 type fakeQuery struct {
 	r interface{}
