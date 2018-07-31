@@ -239,6 +239,8 @@ type Collectioner interface {
 	Upsert(selector interface{}, update interface{}) (info *mgo.ChangeInfo, err error)
 	UpsertId(id interface{}, update interface{}) (info *mgo.ChangeInfo, err error)
 	With(s *mgo.Session) Collectioner
+
+	MethodCalls() []methodCall
 }
 
 type mcollection struct {
@@ -313,6 +315,9 @@ func (c *mcollection) Repair() Iterator {
 }
 func (c *mcollection) With(s *mgo.Session) Collectioner {
 	return &mcollection{c.c.With(s)}
+}
+func (c *mcollection) MethodCalls() []methodCall {
+	return nil
 }
 
 // Querier is the public interface for *mgo.Query to enable mocking

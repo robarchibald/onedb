@@ -13,9 +13,8 @@ func TestNewFakeSession(t *testing.T) {
 	fs, _ := NewFakeSession([]FakeMongoQuery{
 		{DB: "db", Collection: "collection", Query: q, Return: r},
 	})
-	s := fs.(*fakeSession)
 	var item []string
-	if err := s.DB("db").C("collection").Find(q).One(&item); err != nil {
+	if err := fs.DB("db").C("collection").Find(q).One(&item); err != nil {
 		t.Error(err)
 	}
 	if len(item) != 5 || item[0] != "1" || item[1] != "2" || item[2] != "3" || item[3] != "4" || item[4] != "5" {
@@ -25,8 +24,7 @@ func TestNewFakeSession(t *testing.T) {
 
 func TestQueriesRun(t *testing.T) {
 	fs, _ := NewFakeSession(nil)
-	s := fs.(*fakeSession)
-	c := s.DB("db").C("collection").(*fakeCollection)
+	c := fs.DB("db").C("collection")
 	c.Count()
 	c.Create(nil)
 	c.DropCollection()
@@ -50,7 +48,7 @@ func TestQueriesRun(t *testing.T) {
 	c.Upsert("", "")
 	c.UpsertId("", "")
 	c.With(nil)
-	if len(c.methodsCalled) != 23 {
-		t.Error("Expected queries to be logged", len(c.methodsCalled))
+	if l := len(c.MethodCalls()); l != 23 {
+		t.Error("Expected queries to be logged", l)
 	}
 }

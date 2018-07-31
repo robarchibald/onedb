@@ -35,7 +35,6 @@ func NewFakeSession(queryResults []FakeMongoQuery) (Sessioner, error) {
 		d := getDatabase(smap, r.DB)
 		c := getCollection(d, r.Collection)
 		c.q = append(c.q, query{r.Query, r.Return})
-		fmt.Println(smap, c.q)
 	}
 	return &fakeSession{smap}, nil
 }
@@ -58,6 +57,7 @@ func getCollection(db *fakeDatabase, collectionName string) *fakeCollection {
 	return c
 }
 
+// fakeSession is a fake Mongo DB session
 type fakeSession struct {
 	data sessionToDBMap
 }
@@ -252,6 +252,9 @@ func (c *fakeCollection) Repair() Iterator {
 func (c *fakeCollection) With(s *mgo.Session) Collectioner {
 	c.methodsCalled = append(c.methodsCalled, *newMethodCall("With", s))
 	return c
+}
+func (c *fakeCollection) MethodCalls() []methodCall {
+	return c.methodsCalled
 }
 
 type fakeQuery struct {
