@@ -64,15 +64,13 @@ func (s *msession) BuildInfo() (info mgo.BuildInfo, err error) {
 	return s.s.BuildInfo()
 }
 func (s *msession) Clone() Sessioner {
-	s.s = s.s.Clone()
-	return s
+	return &msession{s.s.Clone()}
 }
 func (s *msession) Close() {
 	s.s.Close()
 }
 func (s *msession) Copy() Sessioner {
-	s.s = s.s.Copy()
-	return s
+	return &msession{s.s.Copy()}
 }
 func (s *msession) DatabaseNames() (names []string, err error) {
 	return s.s.DatabaseNames()
