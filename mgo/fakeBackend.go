@@ -36,13 +36,13 @@ func NewFakeSession(queryResults []FakeMongoQuery) (Sessioner, error) {
 		c := getCollection(d, r.Collection)
 		c.q = append(c.q, query{r.Query, r.Return})
 	}
-	return &fakeSession{smap}, nil
+	return &fakeSession{data: smap}, nil
 }
 
 func getDatabase(smap sessionToDBMap, dbName string) *fakeDatabase {
 	d, ok := smap[dbName]
 	if !ok {
-		d = &fakeDatabase{make(dbToCollectionMap)}
+		d = &fakeDatabase{collections: make(dbToCollectionMap)}
 		smap[dbName] = d
 	}
 	return d
@@ -60,6 +60,7 @@ func getCollection(db *fakeDatabase, collectionName string) *fakeCollection {
 // fakeSession is a fake Mongo DB session
 type fakeSession struct {
 	data sessionToDBMap
+	Sessioner
 }
 
 func (s *fakeSession) BuildInfo() (info mgo.BuildInfo, err error) { return mgo.BuildInfo{}, nil }
@@ -75,10 +76,11 @@ func (s *fakeSession) DatabaseNames() (names []string, err error) {
 }
 func (s *fakeSession) DB(name string) Databaser {
 	db, ok := s.data[name]
-	if ok {
-		return db
+	if !ok {
+		db = &fakeDatabase{collections: make(dbToCollectionMap)}
+		s.data[name] = db
 	}
-	return &fakeDatabase{make(dbToCollectionMap)}
+	return db
 }
 func (s *fakeSession) EnsureSafe(safe *mgo.Safe) {}
 func (s *fakeSession) FindRef(ref *mgo.DBRef) Querier {
@@ -110,15 +112,17 @@ func (s *fakeSession) SetSyncTimeout(d time.Duration)                {}
 
 type fakeDatabase struct {
 	collections dbToCollectionMap
+	Databaser
 }
 
 func (d *fakeDatabase) AddUser(username, password string, readOnly bool) error { return nil }
 func (d *fakeDatabase) C(name string) Collectioner {
 	c, ok := d.collections[name]
-	if ok {
-		return c
+	if !ok {
+		c = &fakeCollection{q: []query{}, methodsCalled: []methodCall{}}
+		d.collections[name] = c
 	}
-	return &fakeCollection{[]query{}, []methodCall{}}
+	return c
 }
 func (d *fakeDatabase) CollectionNames() (names []string, err error) {
 	var n []string
@@ -151,6 +155,7 @@ func newMethodCall(name string, args ...interface{}) *methodCall {
 type fakeCollection struct {
 	q             []query
 	methodsCalled []methodCall
+	Collectioner
 }
 
 func (c *fakeCollection) Count() (n int, err error) {
