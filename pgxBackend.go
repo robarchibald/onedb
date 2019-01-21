@@ -1,12 +1,13 @@
 package onedb
 
 import (
-	"github.com/pkg/errors"
-	"gopkg.in/jackc/pgx.v2"
 	"math"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	pgx "gopkg.in/jackc/pgx.v2"
 )
 
 var pgxCreate pgxCreator = &pgxRealCreator{}
@@ -60,9 +61,22 @@ type pgxBackender interface {
 	QueryRow(query string, args ...interface{}) *pgx.Row
 }
 
+// NewPgxFromURI returns a PGX DBer instance from a connection URI
+func NewPgxFromURI(uri string) (DBer, error) {
+	connConfig, err := pgx.ParseURI(uri)
+	if err != nil {
+		return nil, err
+	}
+	return newPgx(&connConfig)
+}
+
+// NewPgx returns a PGX DBer instance from a set of parameters
 func NewPgx(server string, port uint16, username string, password string, database string) (DBer, error) {
-	connConfig := pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database, Dial: dialHelper.Dial}
-	poolConfig := pgx.ConnPoolConfig{ConnConfig: connConfig, MaxConnections: 10}
+	return newPgx(&pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database, Dial: dialHelper.Dial})
+}
+
+func newPgx(connConfig *pgx.ConnConfig) (DBer, error) {
+	poolConfig := pgx.ConnPoolConfig{ConnConfig: *connConfig, MaxConnections: 10}
 	pgxDb, err := pgxCreate.newConnPool(poolConfig)
 	if err != nil {
 		return nil, err
