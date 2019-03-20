@@ -1,10 +1,11 @@
 package onedb
 
 import (
-	"github.com/pkg/errors"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 func getStruct(rows rowsScanner, result interface{}) error {
@@ -67,6 +68,7 @@ func setValue(field reflect.Value, pval *interface{}) {
 	if dbType != reflect.TypeOf(nil) && (fieldType != dbType && fieldType.Kind() != reflect.Ptr || fieldType.Kind() == reflect.Ptr && fieldType.Elem() != dbType) {
 		return
 	}
+
 	switch v := (*pval).(type) {
 	case nil:
 	case bool:
@@ -78,13 +80,29 @@ func setValue(field reflect.Value, pval *interface{}) {
 	case []byte:
 		field.SetBytes(v)
 	case float32:
-		field.SetFloat(float64(v))
+		if field.Kind() == reflect.Ptr {
+			field.Set(reflect.ValueOf(&v))
+		} else {
+			field.SetFloat(float64(v))
+		}
 	case float64:
-		field.SetFloat(v)
+		if field.Kind() == reflect.Ptr {
+			field.Set(reflect.ValueOf(&v))
+		} else {
+			field.SetFloat(v)
+		}
 	case int:
-		field.SetInt(int64(v))
+		if field.Kind() == reflect.Ptr {
+			field.Set(reflect.ValueOf(&v))
+		} else {
+			field.SetInt(int64(v))
+		}
 	case int8:
-		field.SetInt(int64(v))
+		if field.Kind() == reflect.Ptr {
+			field.Set(reflect.ValueOf(&v))
+		} else {
+			field.SetInt(int64(v))
+		}
 	case int16:
 		if field.Kind() == reflect.Ptr {
 			field.Set(reflect.ValueOf(&v))
@@ -92,9 +110,17 @@ func setValue(field reflect.Value, pval *interface{}) {
 			field.SetInt(int64(v))
 		}
 	case int32:
-		field.SetInt(int64(v))
+		if field.Kind() == reflect.Ptr {
+			field.Set(reflect.ValueOf(&v))
+		} else {
+			field.SetInt(int64(v))
+		}
 	case int64:
-		field.SetInt(v)
+		if field.Kind() == reflect.Ptr {
+			field.Set(reflect.ValueOf(&v))
+		} else {
+			field.SetInt(v)
+		}
 	case uint8:
 		field.SetUint(uint64(v))
 	case uint16:
