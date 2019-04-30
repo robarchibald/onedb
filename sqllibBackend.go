@@ -8,7 +8,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-var errInvalidSqlQueryType = errors.New("Invalid query. Must be of type *SqlQuery")
+var ErrInvalidSqlQueryType = errors.New("Invalid query. Must be of type *SqlQuery")
 var sqllibCreate sqllibCreator = &sqllibRealCreator{}
 
 type sqllibCreator interface {
@@ -22,17 +22,25 @@ func (o *sqllibRealCreator) Open(driverName, dataSourceName string) (sqlLibBacke
 }
 
 type SqlQuery struct {
-	query string
-	args  []interface{}
+	Query string
+	Args  []interface{}
 }
 
 func NewSqlQuery(query string, args ...interface{}) *SqlQuery {
-	return &SqlQuery{query: query, args: args}
+	return &SqlQuery{Query: query, Args: args}
 }
 
 type sqllibBackend struct {
 	db sqlLibBackender
 	backender
+}
+
+//move me
+type backender interface {
+	Close() error
+	Execute(query interface{}) error
+	Query(query interface{}) (rowsScanner, error)
+	QueryRow(query interface{}) scanner
 }
 
 type sqlLibBackender interface {
@@ -54,6 +62,15 @@ func NewSqllib(driverName, connectionString string) (DBer, error) {
 	return newBackendConverter(&sqllibBackend{db: sqlDb}), nil
 }
 
+type backendConverter struct {
+	backend backender
+	DBer
+}
+
+func newBackendConverter(backend backender) DBer {
+	return &backendConverter{backend: backend}
+}
+
 func (b *sqllibBackend) Close() error {
 	return b.db.Close()
 }
@@ -61,16 +78,16 @@ func (b *sqllibBackend) Close() error {
 func (b *sqllibBackend) Query(query interface{}) (rowsScanner, error) {
 	q, ok := query.(*SqlQuery)
 	if !ok {
-		return nil, errInvalidSqlQueryType
+		return nil, ErrInvalidSqlQueryType
 	}
-	return b.db.Query(q.query, q.args...)
+	return b.db.Query(q.Query, q.Args...)
 }
 
 func (b *sqllibBackend) Execute(command interface{}) error {
 	c, ok := command.(*SqlQuery)
 	if !ok {
-		return errInvalidSqlQueryType
+		return ErrInvalidSqlQueryType
 	}
-	_, err := b.db.Exec(c.query, c.args...)
+	_, err := b.db.Exec(c.Query, c.Args...)
 	return err
 }

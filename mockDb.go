@@ -119,10 +119,10 @@ func setDest(source interface{}, dest interface{}) error {
 	return nil
 }
 
-type errorScanner struct {
+type ErrorScanner struct {
 	Err error
 }
 
-func (s *errorScanner) Scan(dest ...interface{}) error {
+func (s *ErrorScanner) Scan(dest ...interface{}) error {
 	return s.Err
 }

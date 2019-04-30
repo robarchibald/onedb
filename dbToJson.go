@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 )
 
-func getJSON(rows rowsScanner) (string, error) {
+func GetJSON(rows rowsScanner) (string, error) {
 	columns, vals, err := getColumnNamesAndValues(rows, true)
 	if err != nil {
 		return "", err
@@ -29,7 +29,7 @@ func getJSON(rows rowsScanner) (string, error) {
 	return b.String(), nil
 }
 
-func getJSONRow(rows rowsScanner) (string, error) {
+func GetJSONRow(rows rowsScanner) (string, error) {
 	columns, vals, err := getColumnNamesAndValues(rows, true)
 	if err != nil {
 		return "", err

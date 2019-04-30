@@ -4,13 +4,14 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"gopkg.in/ldap.v2"
 	"math"
 	"net"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"gopkg.in/ldap.v2"
 )
 
 var errInvalidLdapQueryType = errors.New("Invalid query. Must be of type *ldap.SearchRequest")
@@ -58,6 +59,43 @@ func NewLdap(hostname string, port int, binddn string, password string) (DBer, e
 	}
 	return &ldapBackend{l: l, hostname: hostname, port: port, binddn: binddn, password: password}, nil
 }
+
+//move below
+type dialer interface {
+	Dial(network, addr string) (net.Conn, error)
+}
+
+func isPointer(item reflect.Type) bool {
+	return item.Kind() == reflect.Ptr
+}
+
+func isSlice(item reflect.Type) bool {
+	return item.Kind() == reflect.Slice
+}
+
+var dialHelper dialer = &realDialer{}
+
+type realDialer struct{}
+
+func (d *realDialer) Dial(network, addr string) (net.Conn, error) {
+	tcpAddr, err := net.ResolveTCPAddr(network, addr)
+	if err != nil {
+		return nil, err
+	}
+	tc, err := net.DialTCP(network, nil, tcpAddr)
+	if err != nil {
+		return nil, err
+	}
+	if err := tc.SetKeepAlive(true); err != nil {
+		return nil, err
+	}
+	if err := tc.SetKeepAlivePeriod(2 * time.Minute); err != nil {
+		return nil, err
+	}
+	return tc, nil
+}
+
+//move above
 
 func ldapConnect(hostname string, port int, binddn string, password string) (ldapBackender, error) {
 	tc, err := dialHelper.Dial("tcp", fmt.Sprintf("%s:%d", hostname, port))
