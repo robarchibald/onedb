@@ -12,6 +12,7 @@ type backender interface {
 	Execute(query interface{}) error
 	Query(query interface{}) (rowsScanner, error)
 	QueryRow(query interface{}) scanner
+	// CopyFrom()
 }
 
 type backendConverter struct {
