@@ -1,6 +1,7 @@
 package pgxo
 
 import (
+	"fmt"
 	"math"
 	"net"
 	"strings"
@@ -92,13 +93,25 @@ func (b *pgxBackend) Close() error {
 	return nil
 }
 
-func (b *pgxBackend) CopyFrom(tableName pgx.Identifier, columnNames []string, rows pgx.CopyFromSource) (int, error) {
-	rowsCopied, err := b.CopyFrom(
-		tableName,
+func (b *pgxBackend) CopyFrom(tableName string, columnNames []string, rows [][]interface{}) (int, error) {
+	fmt.Println("copyfrom before, tableName:", tableName, "rows:", rows, "columnNames:", columnNames)
+	// fmt.Println("copyfrom before")
+	// rows = [][]interface{}{
+	// 	{"5cc9f8281dd9a192d51db9c2", "5a62a536d030123da5af35d1", "2018-01-23 17:03:31.921", "HEW004724093", "HEW004724093", "1"},
+	// 	{"5a62a536d030123da5af35d1", "5cc9f8281dd9a192d51db9c2", "2019-05-01 12:48:56.717825", "HEW004724093", "HEW004724093", "1"},
+	// }
+	// tableName = "duplicates"
+	fmt.Println("b", b)
+	fmt.Println("CopyFromRows:", pgx.CopyFromRows(rows))
+	copyCount, err := b.db.CopyFrom(
+		pgx.Identifier{tableName},
+		// pgx.Identifier{"public", "duplicates"},
 		columnNames,
-		rows,
+		// []string{"claimid", "matchid", "matchdate", "matchclaimnumber", "matchreferencenumber", "matchfraction"},
+		pgx.CopyFromRows(rows),
 	)
-	return rowsCopied, err
+	fmt.Println("copyfrom after")
+	return copyCount, err
 }
 
 func (b *pgxBackend) QueryRow(query interface{}) scanner {

@@ -1,6 +1,7 @@
 package pgxo
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/EndFirstCorp/onedb"
@@ -12,7 +13,7 @@ type backender interface {
 	Execute(query interface{}) error
 	Query(query interface{}) (rowsScanner, error)
 	QueryRow(query interface{}) scanner
-	// CopyFrom()
+	CopyFrom(tableName string, columnNames []string, rowSrc [][]interface{}) (int, error)
 }
 
 type backendConverter struct {
@@ -80,6 +81,14 @@ func (c *backendConverter) QueryStructRow(query interface{}, result interface{})
 	defer rows.Close()
 
 	return onedb.GetStructRow(rows, result)
+}
+
+func (c *backendConverter) Copy(tableName string, columnNames []string, rowSrc [][]interface{}) (int, error) {
+	fmt.Println("copy before")
+	// fmt.Println("copy before, tableName:", tableName, "rowSrc:", rowSrc, "columnNames:", columnNames)
+	copyCount, err := c.backend.CopyFrom(tableName, columnNames, rowSrc)
+	fmt.Println("copy after, rowsCopied:", copyCount, "err:", err)
+	return copyCount, err
 }
 
 func (c *backendConverter) Close() error {
