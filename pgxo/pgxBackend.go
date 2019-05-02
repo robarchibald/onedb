@@ -85,7 +85,7 @@ func newPgx(connConfig *pgx.ConnConfig) (DBer, error) {
 		return nil, err
 	}
 
-	return onedb.NewBackendConverter(&pgxBackend{db: pgxDb}), nil
+	return newBackendConverter(&pgxBackend{db: pgxDb}), nil
 }
 
 func (b *pgxBackend) Close() error {

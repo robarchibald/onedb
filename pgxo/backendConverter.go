@@ -56,7 +56,7 @@ func (c *backendConverter) QueryJSONRow(query interface{}) (string, error) {
 
 func (c *backendConverter) QueryStruct(query interface{}, result interface{}) error {
 	resultType := reflect.TypeOf(result)
-	if !onedb.IsPointer(resultType) || !isSlice(resultType.Elem()) {
+	if !onedb.IsPointer(resultType) || !onedb.IsSlice(resultType.Elem()) {
 		return errors.New("Invalid result argument.  Must be a pointer to a slice")
 	}
 

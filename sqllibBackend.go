@@ -59,7 +59,8 @@ func NewSqllib(driverName, connectionString string) (DBer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewBackendConverter(&sqllibBackend{db: sqlDb}), nil
+	// return NewBackendConverter(&sqllibBackend{db: sqlDb}), nil
+	return nil, nil
 	// need some help deciding on this one, if we move newbackendconverter, and thus backendconverter, into the main repo, we will have to move eery single method (basically the whole file including my custom PGX functionality) from backendconverter to the main repo
 }
 

@@ -2,15 +2,14 @@ package pgxo
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/EndFirstCorp/onedb"
 )
 
 func TestBackendConverterQueryJson(t *testing.T) {
-	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
-	db := newBackendConverter(&mockBackend{Rows: rows})
+	rows := onedb.NewMockRowsScanner([]onedb.SimpleData{onedb.SimpleData{1, "hello"}})
+	db := newBackendConverter(&pgxMockBackend{Rows: rows})
 
 	json, err := db.QueryJSON("select * from TestTable")
 	if json != "[{\"IntVal\":1,\"StringVal\":\"hello\"}]" {
@@ -20,7 +19,7 @@ func TestBackendConverterQueryJson(t *testing.T) {
 		t.Error("didn't expect error")
 	}
 
-	db = newBackendConverter(&mockBackend{QueryErr: errors.New("fail")})
+	db = newBackendConverter(&pgxMockBackend{QueryErr: errors.New("fail")})
 	_, err = db.QueryJSON("select * from TestTable")
 	if err == nil {
 		t.Error("expected error")
@@ -28,8 +27,8 @@ func TestBackendConverterQueryJson(t *testing.T) {
 }
 
 func TestBackendConverterQueryJsonRow(t *testing.T) {
-	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
-	db := newBackendConverter(&mockBackend{Rows: rows})
+	rows := onedb.NewMockRowsScanner([]onedb.SimpleData{onedb.SimpleData{1, "hello"}})
+	db := newBackendConverter(&pgxMockBackend{Rows: rows})
 
 	json, err := db.QueryJSONRow("select * from TestTable")
 	if json != "{\"IntVal\":1,\"StringVal\":\"hello\"}" {
@@ -39,7 +38,7 @@ func TestBackendConverterQueryJsonRow(t *testing.T) {
 		t.Error("didn't expect error")
 	}
 
-	db = newBackendConverter(&mockBackend{QueryErr: errors.New("fail")})
+	db = newBackendConverter(&pgxMockBackend{QueryErr: errors.New("fail")})
 	_, err = db.QueryJSONRow("select * from TestTable")
 	if err == nil {
 		t.Error("expected error")
@@ -47,9 +46,9 @@ func TestBackendConverterQueryJsonRow(t *testing.T) {
 }
 
 func TestBackendConverterQueryStruct(t *testing.T) {
-	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
-	db := newBackendConverter(&mockBackend{Rows: rows})
-	data := []SimpleData{}
+	rows := onedb.NewMockRowsScanner([]onedb.SimpleData{onedb.SimpleData{1, "hello"}})
+	db := newBackendConverter(&pgxMockBackend{Rows: rows})
+	data := []onedb.SimpleData{}
 
 	// wrong receiver type
 	err := db.QueryStruct("query", data)
@@ -64,7 +63,7 @@ func TestBackendConverterQueryStruct(t *testing.T) {
 	}
 
 	// query error
-	db = newBackendConverter(&mockBackend{QueryErr: errors.New("fail")})
+	db = newBackendConverter(&pgxMockBackend{QueryErr: errors.New("fail")})
 	err = db.QueryStruct("query", &data)
 	if err == nil {
 		t.Error("expected error", err)
@@ -72,9 +71,9 @@ func TestBackendConverterQueryStruct(t *testing.T) {
 }
 
 func TestBackendConverterQueryStructRow(t *testing.T) {
-	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
-	db := newBackendConverter(&mockBackend{Rows: rows})
-	data := SimpleData{}
+	rows := onedb.NewMockRowsScanner([]onedb.SimpleData{onedb.SimpleData{1, "hello"}})
+	db := newBackendConverter(&pgxMockBackend{Rows: rows})
+	data := onedb.SimpleData{}
 
 	// wrong receiver type
 	err := db.QueryStructRow("query", data)
@@ -89,7 +88,7 @@ func TestBackendConverterQueryStructRow(t *testing.T) {
 	}
 
 	// query error
-	db = newBackendConverter(&mockBackend{QueryErr: errors.New("fail")})
+	db = newBackendConverter(&pgxMockBackend{QueryErr: errors.New("fail")})
 	err = db.QueryStructRow("query", &data)
 	if err == nil {
 		t.Error("expected error", err)
@@ -97,7 +96,7 @@ func TestBackendConverterQueryStructRow(t *testing.T) {
 }
 
 func TestBackendConverterClose(t *testing.T) {
-	db := newBackendConverter(&mockBackend{CloseErr: errors.New("fail")})
+	db := newBackendConverter(&pgxMockBackend{CloseErr: errors.New("fail")})
 	if db.Close() == nil {
 		t.Error("expected error on close")
 	}
@@ -109,14 +108,14 @@ func TestBackendConverterClose(t *testing.T) {
 }
 
 func TestBackendConverterExecute(t *testing.T) {
-	db := newBackendConverter(&mockBackend{ExecErr: errors.New("fail")})
+	db := newBackendConverter(&pgxMockBackend{ExecErr: errors.New("fail")})
 	if db.Execute("hi") == nil {
 		t.Error("expected error on execute")
 	}
 }
 
 func TestBackendConverterBackend(t *testing.T) {
-	b := &mockBackend{ExecErr: errors.New("fail")}
+	b := &pgxMockBackend{ExecErr: errors.New("fail")}
 	db := newBackendConverter(b)
 	if b != db.Backend() {
 		t.Error("expected to get back my backend")
@@ -127,28 +126,37 @@ func TestBackendConverterBackend(t *testing.T) {
 // var ErrRowsScannerInvalidData = errors.New("data must be a slice of structs")
 // var ErrRowScannerInvalidData = errors.New("data must be a ptr to a struct")
 
-type mockBackend struct {
-	Rows     rowsScanner
-	Row      scanner
-	CloseErr error
-	ExecErr  error
-	QueryErr error
+type pgxMockBackend struct {
+	Rows        rowsScanner
+	Row         scanner
+	CloseErr    error
+	ExecErr     error
+	QueryErr    error
+	CopyFromErr error
 }
 
-func (b *mockBackend) Close() error {
+func (b *pgxMockBackend) Close() error {
 	return b.CloseErr
 }
-func (b *mockBackend) Execute(query interface{}) error {
+func (b *pgxMockBackend) Execute(query interface{}) error {
 	return b.ExecErr
 }
-func (b *mockBackend) Query(query interface{}) (rowsScanner, error) {
+func (b *pgxMockBackend) Query(query interface{}) (rowsScanner, error) {
 	return b.Rows, b.QueryErr
 }
-func (b *mockBackend) QueryRow(query interface{}) scanner {
+
+func (b *pgxMockBackend) QueryRow(query interface{}) scanner {
 	if b.QueryErr != nil {
-		return &mockScanner{ScanErr: b.QueryErr}
+		return &onedb.MockScanner{ScanErr: b.QueryErr}
 	}
 	return b.Row
+}
+
+//fixme
+func (b *pgxMockBackend) CopyFrom(tableName string, columnNames []string, rows [][]interface{}) (int, error) {
+	err := b.CopyFromErr
+	copyCount := 10
+	return copyCount, err
 }
 
 // type mockRowsScanner struct {
@@ -227,23 +235,23 @@ func (b *mockBackend) QueryRow(query interface{}) scanner {
 // 	return r.ErrErr
 // }
 
-type mockScanner struct {
-	structValue reflect.Value
-	data        interface{}
-	ScanErr     error
-}
+// type mockScanner struct {
+// 	structValue reflect.Value
+// 	data        interface{}
+// 	ScanErr     error
+// }
 
-func newMockScanner(data interface{}) *mockScanner {
-	if data == nil || reflect.TypeOf(data).Kind() != reflect.Ptr || reflect.TypeOf(data).Elem().Kind() != reflect.Struct {
-		return &mockScanner{ScanErr: ErrRowScannerInvalidData}
-	}
-	structValue := reflect.ValueOf(data).Elem()
-	return &mockScanner{data: data, structValue: structValue}
-}
+// func newMockScanner(data interface{}) *mockScanner {
+// 	if data == nil || reflect.TypeOf(data).Kind() != reflect.Ptr || reflect.TypeOf(data).Elem().Kind() != reflect.Struct {
+// 		return &mockScanner{ScanErr: ErrRowScannerInvalidData}
+// 	}
+// 	structValue := reflect.ValueOf(data).Elem()
+// 	return &mockScanner{data: data, structValue: structValue}
+// }
 
-func (s *mockScanner) Scan(dest ...interface{}) error {
-	if s.ScanErr != nil {
-		return s.ScanErr
-	}
-	return setDestValue(s.structValue, dest)
-}
+// func (s *mockScanner) Scan(dest ...interface{}) error {
+// 	if s.ScanErr != nil {
+// 		return s.ScanErr
+// 	}
+// 	return setDestValue(s.structValue, dest)
+// }

@@ -128,7 +128,7 @@ func TestErrorScannerScan(t *testing.T) {
 	}
 }
 
-type SimpleData struct {
-	IntVal    int
-	StringVal string
-}
+// type SimpleData struct {
+// 	IntVal    int
+// 	StringVal string
+// }
