@@ -122,7 +122,7 @@ func TestExec(t *testing.T) {
 
 func TestErrorScannerScan(t *testing.T) {
 	err := errors.New("fail")
-	e := errorScanner{err}
+	e := ErrorScanner{err}
 	if e.Scan() != err {
 		t.Error("expected errorScanner to return error")
 	}

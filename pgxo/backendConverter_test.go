@@ -2,13 +2,14 @@ package pgxo
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/EndFirstCorp/onedb"
 )
 
 func TestBackendConverterQueryJson(t *testing.T) {
-	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	db := newBackendConverter(&mockBackend{Rows: rows})
 
 	json, err := db.QueryJSON("select * from TestTable")
@@ -27,7 +28,7 @@ func TestBackendConverterQueryJson(t *testing.T) {
 }
 
 func TestBackendConverterQueryJsonRow(t *testing.T) {
-	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	db := newBackendConverter(&mockBackend{Rows: rows})
 
 	json, err := db.QueryJSONRow("select * from TestTable")
@@ -46,7 +47,7 @@ func TestBackendConverterQueryJsonRow(t *testing.T) {
 }
 
 func TestBackendConverterQueryStruct(t *testing.T) {
-	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	db := newBackendConverter(&mockBackend{Rows: rows})
 	data := []SimpleData{}
 
@@ -71,7 +72,7 @@ func TestBackendConverterQueryStruct(t *testing.T) {
 }
 
 func TestBackendConverterQueryStructRow(t *testing.T) {
-	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	db := newBackendConverter(&mockBackend{Rows: rows})
 	data := SimpleData{}
 
@@ -123,8 +124,8 @@ func TestBackendConverterBackend(t *testing.T) {
 }
 
 /******************** MOCKS ************************/
-var ErrRowsScannerInvalidData = errors.New("data must be a slice of structs")
-var ErrRowScannerInvalidData = errors.New("data must be a ptr to a struct")
+// var ErrRowsScannerInvalidData = errors.New("data must be a slice of structs")
+// var ErrRowScannerInvalidData = errors.New("data must be a ptr to a struct")
 
 type mockBackend struct {
 	Rows     rowsScanner
@@ -150,81 +151,81 @@ func (b *mockBackend) QueryRow(query interface{}) scanner {
 	return b.Row
 }
 
-type mockRowsScanner struct {
-	sliceValue reflect.Value
-	sliceLen   int
-	structType reflect.Type
-	structLen  int
-	data       interface{}
-	currentRow int
-	ColumnsErr error
-	CloseErr   error
-	ScanErr    error
-	ErrErr     error
-}
+// type mockRowsScanner struct {
+// 	sliceValue reflect.Value
+// 	sliceLen   int
+// 	structType reflect.Type
+// 	structLen  int
+// 	data       interface{}
+// 	currentRow int
+// 	ColumnsErr error
+// 	CloseErr   error
+// 	ScanErr    error
+// 	ErrErr     error
+// }
 
-func newMockRowsScanner(data interface{}) *mockRowsScanner {
-	if data == nil || reflect.TypeOf(data).Kind() != reflect.Slice || reflect.TypeOf(data).Elem().Kind() != reflect.Struct {
-		return &mockRowsScanner{ScanErr: ErrRowsScannerInvalidData, ErrErr: ErrRowsScannerInvalidData}
-	}
-	sliceValue := reflect.ValueOf(data)
-	sliceLen := sliceValue.Len()
-	structType := reflect.TypeOf(data).Elem()
-	structLen := structType.NumField()
+// func newMockRowsScanner(data interface{}) *mockRowsScanner {
+// 	if data == nil || reflect.TypeOf(data).Kind() != reflect.Slice || reflect.TypeOf(data).Elem().Kind() != reflect.Struct {
+// 		return &mockRowsScanner{ScanErr: ErrRowsScannerInvalidData, ErrErr: ErrRowsScannerInvalidData}
+// 	}
+// 	sliceValue := reflect.ValueOf(data)
+// 	sliceLen := sliceValue.Len()
+// 	structType := reflect.TypeOf(data).Elem()
+// 	structLen := structType.NumField()
 
-	return &mockRowsScanner{data: data, currentRow: -1, sliceValue: sliceValue, sliceLen: sliceLen, structType: structType, structLen: structLen}
-}
+// 	return &mockRowsScanner{data: data, currentRow: -1, sliceValue: sliceValue, sliceLen: sliceLen, structType: structType, structLen: structLen}
+// }
 
-func (r *mockRowsScanner) Columns() ([]string, error) {
-	if r.ColumnsErr != nil {
-		return nil, r.ColumnsErr
-	}
+// func (r *mockRowsScanner) Columns() ([]string, error) {
+// 	if r.ColumnsErr != nil {
+// 		return nil, r.ColumnsErr
+// 	}
 
-	columns := make([]string, r.structLen)
-	for i := 0; i < r.structLen; i++ {
-		columns[i] = r.structType.Field(i).Name
-	}
-	return columns, nil
-}
+// 	columns := make([]string, r.structLen)
+// 	for i := 0; i < r.structLen; i++ {
+// 		columns[i] = r.structType.Field(i).Name
+// 	}
+// 	return columns, nil
+// }
 
-func (r *mockRowsScanner) Next() bool {
-	r.currentRow++
-	if r.currentRow >= r.sliceLen {
-		return false
-	}
-	return true
-}
-func (r *mockRowsScanner) Close() error {
-	return r.CloseErr
-}
-func (r *mockRowsScanner) Scan(dest ...interface{}) error {
-	if r.ScanErr != nil {
-		return r.ScanErr
-	}
-	if r.currentRow >= r.sliceLen || r.currentRow < 0 {
-		return errors.New("invalid current row")
-	}
-	return setDestValue(r.sliceValue.Index(r.currentRow), dest)
-}
+// func (r *mockRowsScanner) Next() bool {
+// 	r.currentRow++
+// 	if r.currentRow >= r.sliceLen {
+// 		return false
+// 	}
+// 	return true
+// }
+// func (r *mockRowsScanner) Close() error {
+// 	return r.CloseErr
+// }
+// func (r *mockRowsScanner) Scan(dest ...interface{}) error {
+// 	if r.ScanErr != nil {
+// 		return r.ScanErr
+// 	}
+// 	if r.currentRow >= r.sliceLen || r.currentRow < 0 {
+// 		return errors.New("invalid current row")
+// 	}
+// 	return setDestValue(r.sliceValue.Index(r.currentRow), dest)
+// }
 
-func setDestValue(structVal reflect.Value, dest []interface{}) error {
-	if len(dest) != structVal.NumField() {
-		return fmt.Errorf("expected equal number of dest values as source. Expected: %d, Actual: %d", structVal.NumField(), len(dest))
-	}
-	for i := range dest {
-		destination := reflect.ValueOf(dest[i]).Elem()
-		source := structVal.Field(i)
-		if destination.Type() != source.Type() && destination.Type().Kind() != reflect.Interface {
-			return fmt.Errorf("source and destination types do not match at index: %d", i)
-		}
-		destination.Set(source)
-	}
-	return nil
-}
+// func setDestValue(structVal reflect.Value, dest []interface{}) error {
+// 	if len(dest) != structVal.NumField() {
+// 		return fmt.Errorf("expected equal number of dest values as source. Expected: %d, Actual: %d", structVal.NumField(), len(dest))
+// 	}
+// 	for i := range dest {
+// 		destination := reflect.ValueOf(dest[i]).Elem()
+// 		source := structVal.Field(i)
+// 		if destination.Type() != source.Type() && destination.Type().Kind() != reflect.Interface {
+// 			return fmt.Errorf("source and destination types do not match at index: %d", i)
+// 		}
+// 		destination.Set(source)
+// 	}
+// 	return nil
+// }
 
-func (r *mockRowsScanner) Err() error {
-	return r.ErrErr
-}
+// func (r *mockRowsScanner) Err() error {
+// 	return r.ErrErr
+// }
 
 type mockScanner struct {
 	structValue reflect.Value

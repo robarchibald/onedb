@@ -56,7 +56,7 @@ func (c *backendConverter) QueryJSONRow(query interface{}) (string, error) {
 
 func (c *backendConverter) QueryStruct(query interface{}, result interface{}) error {
 	resultType := reflect.TypeOf(result)
-	if !isPointer(resultType) || !isSlice(resultType.Elem()) {
+	if !onedb.IsPointer(resultType) || !isSlice(resultType.Elem()) {
 		return errors.New("Invalid result argument.  Must be a pointer to a slice")
 	}
 
@@ -70,7 +70,7 @@ func (c *backendConverter) QueryStruct(query interface{}, result interface{}) er
 }
 
 func (c *backendConverter) QueryStructRow(query interface{}, result interface{}) error {
-	if !isPointer(reflect.TypeOf(result)) {
+	if !onedb.IsPointer(reflect.TypeOf(result)) {
 		return errors.New("Invalid result argument.  Must be a pointer to a struct")
 	}
 
@@ -102,10 +102,10 @@ func (c *backendConverter) Execute(query interface{}) error {
 	return c.backend.Execute(query)
 }
 
-func isPointer(item reflect.Type) bool {
-	return item.Kind() == reflect.Ptr
-}
+// func isPointer(item reflect.Type) bool {
+// 	return item.Kind() == reflect.Ptr
+// }
 
-func isSlice(item reflect.Type) bool {
-	return item.Kind() == reflect.Slice
-}
+// func isSlice(item reflect.Type) bool {
+// 	return item.Kind() == reflect.Slice
+// }

@@ -2,7 +2,6 @@ package pgxo
 
 import (
 	"errors"
-	"net"
 	"testing"
 
 	"gopkg.in/jackc/pgx.v2"
@@ -132,13 +131,13 @@ func TestPgxRowsErr(t *testing.T) {
 }
 
 /***************************** MOCKS ****************************/
-type mockDialer struct {
-	Err error
-}
+// type mockDialer struct {
+// 	Err error
+// }
 
-func (d *mockDialer) Dial(network, addr string) (net.Conn, error) {
-	return nil, d.Err
-}
+// func (d *onedb.MockDialer) Dial(network, addr string) (net.Conn, error) {
+// 	return nil, d.Err
+// }
 
 type pgxMockCreator struct {
 	connector pgxBackender

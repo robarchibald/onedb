@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/EndFirstCorp/onedb"
 )
 
 type TestItem struct {
@@ -45,7 +47,7 @@ type TestStruct struct {
 func TestGetStruct(t *testing.T) {
 	// success
 	result := []SimpleData{}
-	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}})
+	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}})
 	err := getStruct(rows, &result)
 	if err != nil || len(result) != 2 || result[0].IntVal != 1 || result[0].StringVal != "hello" || result[1].IntVal != 2 || result[1].StringVal != "world" {
 		t.Error("expected valid result", err, result)
@@ -53,7 +55,7 @@ func TestGetStruct(t *testing.T) {
 
 	// scan error
 	result = []SimpleData{}
-	rows = newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}})
+	rows = onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}})
 	rows.ScanErr = errors.New("fail")
 	err = getStruct(rows, &result)
 	if err == nil {
@@ -72,7 +74,7 @@ func TestGetStruct(t *testing.T) {
 func TestGetStructRow(t *testing.T) {
 	// success
 	result := SimpleData{}
-	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	err := getStructRow(rows, &result)
 	if err != nil || result.IntVal != 1 || result.StringVal != "hello" {
 		t.Error("expected valid result", err, result)
@@ -80,7 +82,7 @@ func TestGetStructRow(t *testing.T) {
 
 	// scan error
 	result = SimpleData{}
-	rows = newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows = onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	rows.ScanErr = errors.New("fail")
 	err = getStructRow(rows, &result)
 	if err == nil {

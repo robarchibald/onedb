@@ -3,20 +3,21 @@ package onedb
 import (
 	"crypto/tls"
 	"errors"
-	"gopkg.in/ldap.v2"
 	"net"
 	"testing"
+
+	"gopkg.in/ldap.v2"
 )
 
 func TestNewLdap(t *testing.T) {
-	dialHelper = &mockDialer{}
+	DialHelper = &mockDialer{}
 	ldapCreate = &ldapMockCreator{}
 	_, err := NewLdap("localhost", 389, "user", "password")
 	if err != nil {
 		t.Error("expected success", err)
 	}
 
-	dialHelper = &mockDialer{Err: errors.New("fail")}
+	DialHelper = &mockDialer{Err: errors.New("fail")}
 	_, err = NewLdap("localhost", 389, "user", "password")
 	if err == nil {
 		t.Error("expected fail")

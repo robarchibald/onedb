@@ -13,7 +13,7 @@ import (
 )
 
 var pgxCreate pgxCreator = &pgxRealCreator{}
-var dialHelper dialer = &realDialer{}
+var DialHelper onedb.Dialer = &RealDialer{}
 
 type pgxCreator interface {
 	newConnPool(config pgx.ConnPoolConfig) (p pgxBackender, err error)
@@ -25,13 +25,13 @@ func (c *pgxRealCreator) newConnPool(config pgx.ConnPoolConfig) (p pgxBackender,
 	return pgx.NewConnPool(config)
 }
 
-type dialer interface {
-	Dial(network, addr string) (net.Conn, error)
-}
+// type dialer interface {
+// 	Dial(network, addr string) (net.Conn, error)
+// }
 
-type realDialer struct{}
+type RealDialer struct{}
 
-func (d *realDialer) Dial(network, addr string) (net.Conn, error) {
+func (d *RealDialer) Dial(network, addr string) (net.Conn, error) {
 	tcpAddr, err := net.ResolveTCPAddr(network, addr)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func NewPgxFromURI(uri string) (DBer, error) {
 
 // NewPgx returns a PGX DBer instance from a set of parameters
 func NewPgx(server string, port uint16, username string, password string, database string) (DBer, error) {
-	return newPgx(&pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database, Dial: dialHelper.Dial})
+	return newPgx(&pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database, Dial: DialHelper.Dial})
 }
 
 func newPgx(connConfig *pgx.ConnConfig) (DBer, error) {
@@ -85,7 +85,7 @@ func newPgx(connConfig *pgx.ConnConfig) (DBer, error) {
 		return nil, err
 	}
 
-	return newBackendConverter(&pgxBackend{db: pgxDb}), nil
+	return onedb.NewBackendConverter(&pgxBackend{db: pgxDb}), nil
 }
 
 func (b *pgxBackend) Close() error {

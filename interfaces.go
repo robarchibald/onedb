@@ -21,6 +21,4 @@ type DBer interface {
 	QueryJSONRow(query interface{}) (string, error)
 	QueryStruct(query interface{}, result interface{}) error
 	QueryStructRow(query interface{}, result interface{}) error
-
-	// CopyFrom(tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int, error)
 }
