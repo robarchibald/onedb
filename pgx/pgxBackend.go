@@ -29,6 +29,28 @@ type CopyFromSource interface {
 	Err() error
 }
 
+func CopyFromRows(rows [][]interface{}) CopyFromSource {
+	return &copyFromRows{rows: rows, idx: -1}
+}
+
+type copyFromRows struct {
+	rows [][]interface{}
+	idx  int
+}
+
+func (ctr *copyFromRows) Next() bool {
+	ctr.idx++
+	return ctr.idx < len(ctr.rows)
+}
+
+func (ctr *copyFromRows) Values() ([]interface{}, error) {
+	return ctr.rows[ctr.idx], nil
+}
+
+func (ctr *copyFromRows) Err() error {
+	return nil
+}
+
 type pgxBackend struct {
 	db         *pgx.ConnPool
 	lastRetry  time.Time
@@ -136,6 +158,23 @@ func (b *pgxBackend) QueryStructRow(result interface{}, query string, args ...in
 }
 
 func (b *pgxBackend) CopyFrom(tableName Identifier, columnNames []string, rows CopyFromSource) (int, error) {
+	// fmt.Println("copyfrom before, tableName:", tableName, "rows:", rows, "columnNames:", columnNames)
+	// fmt.Println("copyfrom before")
+	// rows = [][]interface{}{
+	// 	{"5cc9f8281dd9a192d51db9c2", "5a62a536d030123da5af35d1", "2018-01-23 17:03:31.921", "HEW004724093", "HEW004724093", "1"},
+	// 	{"5a62a536d030123da5af35d1", "5cc9f8281dd9a192d51db9c2", "2019-05-01 12:48:56.717825", "HEW004724093", "HEW004724093", "1"},
+	// }
+	// tableName = "duplicates"
+	// fmt.Println("b", b)
+	// fmt.Println("CopyFromRows:", pgx.CopyFromRows(rows))
+	// copyCount, err := b.db.CopyFrom(
+	// 	pgx.Identifier{tableName},
+	// 	// pgx.Identifier{"public", "duplicates"},
+	// 	columnNames,
+	// 	// []string{"claimid", "matchid", "matchdate", "matchclaimnumber", "matchreferencenumber", "matchfraction"},
+	// pgx.CopyFromRows(rows),
+	// )
+	// fmt.Println("copyfrom after")
 	return b.db.CopyFrom(pgx.Identifier(tableName), columnNames, rows)
 }
 
