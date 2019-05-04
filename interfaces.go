@@ -1,24 +1,30 @@
 package onedb
 
-type rowsScanner interface {
-	Columns() ([]string, error)
-	Next() bool
-	Close() error
-	Err() error
-	scanner
+// Backender is the db interface needed by onedb to enable QueryStruct and QueryJSON capability
+type Backender interface {
+	Query(query string, args ...interface{}) (RowsScanner, error)
+	QueryRow(query string, args ...interface{}) Scanner
 }
 
-type scanner interface {
+// RowsScanner is the rows interface needed by onedb to enable QueryStruct and QueryJSON capability
+type RowsScanner interface {
+	Close()
+	Columns() ([]string, error)
+	Next() bool
+	Err() error
+	Scanner
+}
+
+// Scanner is the row interface needed by onedb to enable QueryStruct and QueryJSON capability
+type Scanner interface {
 	Scan(dest ...interface{}) error
 }
 
+// DBer is the added interface that onedb can enable for database querying
 type DBer interface {
-	Backend() interface{}
-	Close() error
-	Execute(query interface{}) error
-	QueryValues(query interface{}, result ...interface{}) error
-	QueryJSON(query interface{}) (string, error)
-	QueryJSONRow(query interface{}) (string, error)
-	QueryStruct(query interface{}, result interface{}) error
-	QueryStructRow(query interface{}, result interface{}) error
+	QueryValues(query *SqlQuery, result ...interface{}) error
+	QueryJSON(query string, args ...interface{}) (string, error)
+	QueryJSONRow(query string, args ...interface{}) (string, error)
+	QueryStruct(result interface{}, query string, args ...interface{}) error
+	QueryStructRow(result interface{}, query string, args ...interface{}) error
 }

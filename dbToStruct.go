@@ -9,7 +9,7 @@ import (
 )
 
 // GetStruct takes a rowScanner and result and populates the result slice with the values from the rowsScanner
-func GetStruct(rows rowsScanner, result interface{}) error {
+func GetStruct(rows RowsScanner, result interface{}) error {
 	columns, vals, err := getColumnNamesAndValues(rows, false)
 	if err != nil {
 		return err
@@ -29,7 +29,7 @@ func GetStruct(rows rowsScanner, result interface{}) error {
 }
 
 // GetStructRow takes a rowsScanner and result and populates the result struct with the values from the rowsScanner
-func GetStructRow(rows rowsScanner, result interface{}) error {
+func GetStructRow(rows RowsScanner, result interface{}) error {
 	if !rows.Next() {
 		return errors.New("Empty result set")
 	}
@@ -46,7 +46,7 @@ func GetStructRow(rows rowsScanner, result interface{}) error {
 	return nil
 }
 
-func scanStruct(s scanner, vals []interface{}, dbToStruct map[int]structFieldInfo, result interface{}) error {
+func scanStruct(s Scanner, vals []interface{}, dbToStruct map[int]structFieldInfo, result interface{}) error {
 	err := s.Scan(vals...)
 	if err != nil {
 		return err

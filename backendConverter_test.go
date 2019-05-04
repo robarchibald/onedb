@@ -97,20 +97,16 @@ func TestBackendConverterQueryStructRow(t *testing.T) {
 
 /******************** MOCKS ************************/
 type mockBackend struct {
-	Rows     rowsScanner
-	Row      scanner
+	Rows     RowsScanner
+	Row      Scanner
 	ExecErr  error
 	QueryErr error
 }
 
-func (b *mockBackend) Close() {}
-func (b *mockBackend) Execute(query interface{}) error {
-	return b.ExecErr
-}
-func (b *mockBackend) Query(query string, args ...interface{}) (rowsScanner, error) {
+func (b *mockBackend) Query(query string, args ...interface{}) (RowsScanner, error) {
 	return b.Rows, b.QueryErr
 }
-func (b *mockBackend) QueryRow(query string, args ...interface{}) scanner {
+func (b *mockBackend) QueryRow(query string, args ...interface{}) Scanner {
 	if b.QueryErr != nil {
 		return &mockScanner{ScanErr: b.QueryErr}
 	}
