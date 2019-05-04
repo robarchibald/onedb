@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/EndFirstCorp/onedb"
 )
 
 type TestItem struct {
@@ -47,17 +45,17 @@ type TestStruct struct {
 func TestGetStruct(t *testing.T) {
 	// success
 	result := []SimpleData{}
-	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}})
-	err := getStruct(rows, &result)
+	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}})
+	err := GetStruct(rows, &result)
 	if err != nil || len(result) != 2 || result[0].IntVal != 1 || result[0].StringVal != "hello" || result[1].IntVal != 2 || result[1].StringVal != "world" {
 		t.Error("expected valid result", err, result)
 	}
 
 	// scan error
 	result = []SimpleData{}
-	rows = onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}})
+	rows = newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}})
 	rows.ScanErr = errors.New("fail")
-	err = getStruct(rows, &result)
+	err = GetStruct(rows, &result)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -65,7 +63,7 @@ func TestGetStruct(t *testing.T) {
 	// err error
 	result = []SimpleData{}
 	rows = &mockRowsScanner{ErrErr: errors.New("fail")}
-	err = getStruct(rows, &result)
+	err = GetStruct(rows, &result)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -74,17 +72,17 @@ func TestGetStruct(t *testing.T) {
 func TestGetStructRow(t *testing.T) {
 	// success
 	result := SimpleData{}
-	rows := onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
-	err := getStructRow(rows, &result)
+	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	err := GetStructRow(rows, &result)
 	if err != nil || result.IntVal != 1 || result.StringVal != "hello" {
 		t.Error("expected valid result", err, result)
 	}
 
 	// scan error
 	result = SimpleData{}
-	rows = onedb.NewMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows = newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	rows.ScanErr = errors.New("fail")
-	err = getStructRow(rows, &result)
+	err = GetStructRow(rows, &result)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -92,7 +90,7 @@ func TestGetStructRow(t *testing.T) {
 	// err error
 	result = SimpleData{}
 	rows = &mockRowsScanner{ErrErr: errors.New("fail")}
-	err = getStructRow(rows, &result)
+	err = GetStructRow(rows, &result)
 	if err == nil {
 		t.Error("expected error")
 	}

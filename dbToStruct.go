@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// GetStruct takes a rowScanner and result and populates the result slice with the values from the rowsScanner
 func GetStruct(rows rowsScanner, result interface{}) error {
 	columns, vals, err := getColumnNamesAndValues(rows, false)
 	if err != nil {
@@ -27,6 +28,7 @@ func GetStruct(rows rowsScanner, result interface{}) error {
 	return nil
 }
 
+// GetStructRow takes a rowsScanner and result and populates the result struct with the values from the rowsScanner
 func GetStructRow(rows rowsScanner, result interface{}) error {
 	if !rows.Next() {
 		return errors.New("Empty result set")
