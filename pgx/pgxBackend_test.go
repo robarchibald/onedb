@@ -1,10 +1,11 @@
-package onedb
+package pgx
 
 import (
 	"errors"
-	"gopkg.in/jackc/pgx.v2"
-	"net"
 	"testing"
+
+	"github.com/EndFirstCorp/onedb"
+	"gopkg.in/jackc/pgx.v2"
 )
 
 func TestNewPgx(t *testing.T) {
@@ -49,12 +50,12 @@ func TestPgxQuery(t *testing.T) {
 		t.Error("expected error")
 	}
 
-	d.Query(NewSqlQuery("query", "arg1", "arg2"))
+	d.Query(onedb.NewSqlQuery("query", "arg1", "arg2"))
 	queries := c.MethodsCalled["Query"]
 	if len(c.MethodsCalled) != 1 || len(queries) != 1 ||
-		queries[0].(*SqlQuery).query != "query" ||
-		queries[0].(*SqlQuery).args[0] != "arg1" ||
-		queries[0].(*SqlQuery).args[1] != "arg2" {
+		queries[0].(*onedb.SqlQuery).Query != "query" ||
+		queries[0].(*onedb.SqlQuery).Args[0] != "arg1" ||
+		queries[0].(*onedb.SqlQuery).Args[1] != "arg2" {
 		t.Error("expected query method to be called on backend")
 	}
 }
@@ -67,12 +68,12 @@ func TestPgxExecute(t *testing.T) {
 		t.Error("expected error")
 	}
 
-	d.Execute(NewSqlQuery("query", "arg1", "arg2"))
+	d.Execute(onedb.NewSqlQuery("query", "arg1", "arg2"))
 	queries := c.MethodsCalled["Exec"]
 	if len(c.MethodsCalled) != 1 || len(queries) != 1 ||
-		queries[0].(*SqlQuery).query != "query" ||
-		queries[0].(*SqlQuery).args[0] != "arg1" ||
-		queries[0].(*SqlQuery).args[1] != "arg2" {
+		queries[0].(*onedb.SqlQuery).Query != "query" ||
+		queries[0].(*onedb.SqlQuery).Args[0] != "arg1" ||
+		queries[0].(*onedb.SqlQuery).Args[1] != "arg2" {
 		t.Error("expected Exec method to be called on backend", len(c.MethodsCalled))
 	}
 }
@@ -131,13 +132,13 @@ func TestPgxRowsErr(t *testing.T) {
 }
 
 /***************************** MOCKS ****************************/
-type mockDialer struct {
-	Err error
-}
+// type mockDialer struct {
+// 	Err error
+// }
 
-func (d *mockDialer) Dial(network, addr string) (net.Conn, error) {
-	return nil, d.Err
-}
+// func (d *onedb.MockDialer) Dial(network, addr string) (net.Conn, error) {
+// 	return nil, d.Err
+// }
 
 type pgxMockCreator struct {
 	connector pgxBackender
@@ -163,17 +164,22 @@ func (c *mockPgx) Close() {
 	c.MethodsCalled["Close"] = append(c.MethodsCalled["Close"], nil)
 }
 func (c *mockPgx) Exec(query string, args ...interface{}) (pgx.CommandTag, error) {
-	c.MethodsCalled["Exec"] = append(c.MethodsCalled["Exec"], NewSqlQuery(query, args...))
+	c.MethodsCalled["Exec"] = append(c.MethodsCalled["Exec"], onedb.NewSqlQuery(query, args...))
 	return "tag", nil
 }
 func (c *mockPgx) Query(query string, args ...interface{}) (*pgx.Rows, error) {
-	c.MethodsCalled["Query"] = append(c.MethodsCalled["Query"], NewSqlQuery(query, args...))
+	c.MethodsCalled["Query"] = append(c.MethodsCalled["Query"], onedb.NewSqlQuery(query, args...))
 	return &pgx.Rows{}, nil
 }
 
 func (c *mockPgx) QueryRow(query string, args ...interface{}) *pgx.Row {
-	c.MethodsCalled["QueryRow"] = append(c.MethodsCalled["QueryRow"], NewSqlQuery(query, args...))
+	c.MethodsCalled["QueryRow"] = append(c.MethodsCalled["QueryRow"], onedb.NewSqlQuery(query, args...))
 	return &pgx.Row{}
+}
+
+func (c *mockPgx) CopyFrom(tableName string, columnNames []string, rows [][]interface{}) (int, error) {
+	c.MethodsCalled["CopyFrom"] = append(c.MethodsCalled["CopyFrom"], "copyfrom temp") //fix me
+	return 0, nil
 }
 
 type mockPgxRows struct {

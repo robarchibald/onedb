@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"strconv"
 	"time"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 var errInvalidRedisQueryType = errors.New("Invalid query. Must be of type *RedisCommand")
@@ -26,7 +27,7 @@ func (c *redisRealCreator) newConnPool(server string, port int, password string,
 		MaxIdle:   maxIdle,
 		MaxActive: maxConnections,
 		Dial: func() (redis.Conn, error) {
-			tc, err := dialHelper.Dial("tcp", fmt.Sprintf("%s:%d", server, port))
+			tc, err := DialHelper.Dial("tcp", fmt.Sprintf("%s:%d", server, port))
 			if err != nil {
 				return nil, err
 			}

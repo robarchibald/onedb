@@ -118,11 +118,3 @@ func setDest(source interface{}, dest interface{}) error {
 	destValue.Elem().Set(sourceValue)
 	return nil
 }
-
-type errorScanner struct {
-	Err error
-}
-
-func (s *errorScanner) Scan(dest ...interface{}) error {
-	return s.Err
-}

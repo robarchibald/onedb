@@ -4,13 +4,14 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"gopkg.in/ldap.v2"
 	"math"
 	"net"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"gopkg.in/ldap.v2"
 )
 
 var errInvalidLdapQueryType = errors.New("Invalid query. Must be of type *ldap.SearchRequest")
@@ -60,7 +61,7 @@ func NewLdap(hostname string, port int, binddn string, password string) (DBer, e
 }
 
 func ldapConnect(hostname string, port int, binddn string, password string) (ldapBackender, error) {
-	tc, err := dialHelper.Dial("tcp", fmt.Sprintf("%s:%d", hostname, port))
+	tc, err := DialHelper.Dial("tcp", fmt.Sprintf("%s:%d", hostname, port))
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +116,7 @@ type fieldInfo struct {
 
 func (c *ldapBackend) QueryStruct(query interface{}, result interface{}) error {
 	resultType := reflect.TypeOf(result)
-	if result == nil || !isPointer(resultType) || !isSlice(resultType.Elem()) {
+	if result == nil || !IsPointer(resultType) || !IsSlice(resultType.Elem()) {
 		return errors.New("Invalid result argument.  Must be a pointer to a slice")
 	}
 
@@ -170,7 +171,7 @@ func setRowValue(row reflect.Value, field *fieldInfo, vals []string) error {
 }
 
 func (c *ldapBackend) QueryValues(query interface{}, result ...interface{}) error {
-	if result == nil || !isPointer(reflect.TypeOf(result)) || reflect.TypeOf(result).Elem().Kind() == reflect.Struct {
+	if result == nil || !IsPointer(reflect.TypeOf(result)) || reflect.TypeOf(result).Elem().Kind() == reflect.Struct {
 		return errors.New("Invalid result argument.  Must be a pointer to a primitive type")
 	}
 
@@ -190,7 +191,7 @@ func (c *ldapBackend) QueryValues(query interface{}, result ...interface{}) erro
 }
 
 func (c *ldapBackend) QueryStructRow(query interface{}, result interface{}) error {
-	if result == nil || !isPointer(reflect.TypeOf(result)) {
+	if result == nil || !IsPointer(reflect.TypeOf(result)) {
 		return errors.New("Invalid result argument.  Must be a pointer to a struct")
 	}
 
