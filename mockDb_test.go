@@ -39,7 +39,7 @@ func TestQueryJsonRow(t *testing.T) {
 func TestQueryStruct(t *testing.T) {
 	result := []SimpleData{}
 	d := NewMock(nil, nil)
-	err := d.QueryStruct("select query", result)
+	err := d.QueryStruct(result, "select query")
 	if err == nil {
 		t.Error("expected error for wrong result type")
 	}
@@ -47,17 +47,17 @@ func TestQueryStruct(t *testing.T) {
 	q1 := []SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}}
 	q2 := []SimpleData{SimpleData{3, "test"}}
 	d = NewMock(nil, nil, q1, q2)
-	err = d.QueryStruct("select query", &result)
+	err = d.QueryStruct(&result, "select query")
 	if err != nil || len(result) != 2 || result[0].IntVal != 1 || result[0].StringVal != "hello" || result[1].IntVal != 2 || result[1].StringVal != "world" {
 		t.Error("expected 2 valid rows of data", result, err)
 	}
 
-	err = d.QueryStruct("select query", &result)
+	err = d.QueryStruct(&result, "select query")
 	if err != nil || len(result) != 1 || result[0].IntVal != 3 || result[0].StringVal != "test" {
 		t.Error("expected 2 valid row of data", result, err)
 	}
 
-	err = d.QueryStruct("select query", &result)
+	err = d.QueryStruct(&result, "select query")
 	if err == nil {
 		t.Error("expected error after using all the results", err)
 	}
@@ -66,7 +66,7 @@ func TestQueryStruct(t *testing.T) {
 func TestQueryStructRow(t *testing.T) {
 	result := SimpleData{}
 	d := NewMock(nil, nil)
-	err := d.QueryStructRow("select query", result)
+	err := d.QueryStructRow(result, "select query")
 	if err == nil {
 		t.Error("expected error for wrong result type")
 	}
@@ -74,17 +74,17 @@ func TestQueryStructRow(t *testing.T) {
 	q1 := SimpleData{1, "hello"}
 	q2 := SimpleData{2, "world"}
 	d = NewMock(nil, nil, q1, q2)
-	err = d.QueryStructRow("select query", &result)
+	err = d.QueryStructRow(&result, "select query")
 	if err != nil || result.IntVal != 1 || result.StringVal != "hello" {
 		t.Error("expected valid data", result, err)
 	}
 
-	err = d.QueryStructRow("select query", &result)
+	err = d.QueryStructRow(&result, "select query")
 	if err != nil || result.IntVal != 2 || result.StringVal != "world" {
 		t.Error("expected valid data", result, err)
 	}
 
-	err = d.QueryStructRow("select query", &result)
+	err = d.QueryStructRow(&result, "select query")
 	if err == nil {
 		t.Error("expected error after using all the results", result, err)
 	}
@@ -122,13 +122,13 @@ func TestExec(t *testing.T) {
 
 func TestErrorScannerScan(t *testing.T) {
 	err := errors.New("fail")
-	e := ErrorScanner{err}
+	e := errorScanner{err}
 	if e.Scan() != err {
 		t.Error("expected errorScanner to return error")
 	}
 }
 
-// type SimpleData struct {
-// 	IntVal    int
-// 	StringVal string
-// }
+type SimpleData struct {
+	IntVal    int
+	StringVal string
+}
