@@ -1,14 +1,13 @@
-package onedb
+package sql
 
 import (
-	"database/sql"
-	"errors"
+	sqllib "database/sql"
 
+	"github.com/EndFirstCorp/onedb"
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 )
 
-var ErrInvalidSqlQueryType = errors.New("Invalid query. Must be of type *SqlQuery")
 var sqllibCreate sqllibCreator = &sqllibRealCreator{}
 
 type sqllibCreator interface {
@@ -18,16 +17,7 @@ type sqllibCreator interface {
 type sqllibRealCreator struct{}
 
 func (o *sqllibRealCreator) Open(driverName, dataSourceName string) (sqlLibBackender, error) {
-	return sql.Open(driverName, dataSourceName)
-}
-
-type SqlQuery struct {
-	Query string
-	Args  []interface{}
-}
-
-func NewSqlQuery(query string, args ...interface{}) *SqlQuery {
-	return &SqlQuery{Query: query, Args: args}
+	return sqllib.Open(driverName, dataSourceName)
 }
 
 type sqllibBackend struct {
@@ -39,18 +29,18 @@ type sqllibBackend struct {
 type backender interface {
 	Close() error
 	Execute(query interface{}) error
-	Query(query interface{}) (rowsScanner, error)
-	QueryRow(query interface{}) scanner
+	Query(query interface{}) (onedb.RowsScanner, error)
+	QueryRow(query interface{}) onedb.Scanner
 }
 
 type sqlLibBackender interface {
 	Ping() error
 	Close() error
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Exec(query string, args ...interface{}) (sqllib.Result, error)
+	Query(query string, args ...interface{}) (*sqllib.Rows, error)
 }
 
-func NewSqllib(driverName, connectionString string) (DBer, error) {
+func NewSqllib(driverName, connectionString string) (onedb.DBer, error) {
 	sqlDb, err := sqllibCreate.Open(driverName, connectionString)
 	if err != nil {
 		return nil, err
@@ -68,19 +58,11 @@ func (b *sqllibBackend) Close() error {
 	return b.db.Close()
 }
 
-func (b *sqllibBackend) Query(query interface{}) (rowsScanner, error) {
-	q, ok := query.(*SqlQuery)
-	if !ok {
-		return nil, ErrInvalidSqlQueryType
-	}
-	return b.db.Query(q.Query, q.Args...)
+func (b *sqllibBackend) Query(query string, args ...interface{}) (onedb.RowsScanner, error) {
+	return b.db.Query(query, args...)
 }
 
-func (b *sqllibBackend) Execute(command interface{}) error {
-	c, ok := command.(*SqlQuery)
-	if !ok {
-		return ErrInvalidSqlQueryType
-	}
-	_, err := b.db.Exec(c.Query, c.Args...)
+func (b *sqllibBackend) Execute(command string, args ...interface{}) error {
+	_, err := b.db.Exec(command, args...)
 	return err
 }

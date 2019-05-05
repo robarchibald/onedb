@@ -26,7 +26,7 @@ func NewPgxFromURI(uri string) (PGXer, error) {
 
 // NewPgx returns a PGX DBer instance from a set of parameters
 func NewPgx(server string, port uint16, username string, password string, database string) (PGXer, error) {
-	return newPgx(&pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database})
+	return newPgx(&pgx.ConnConfig{Host: server, Port: port, User: username, Password: password, Database: database, Dial: onedb.DialTCP})
 }
 
 func newPgx(connConfig *pgx.ConnConfig) (PGXer, error) {
@@ -55,7 +55,7 @@ func (b *pgxBackend) CopyFrom(tableName Identifier, columnNames []string, rowSrc
 	return b.db.CopyFrom(tableName, columnNames, rowSrc)
 }
 
-func (b *pgxBackend) QueryValues(query *onedb.SqlQuery, result ...interface{}) error {
+func (b *pgxBackend) QueryValues(query *onedb.Query, result ...interface{}) error {
 	if query == nil {
 		return onedb.ErrQueryIsNil
 	}

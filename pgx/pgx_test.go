@@ -105,7 +105,7 @@ func TestPgxQueryValues(t *testing.T) {
 	c := newMockPgx()
 	d := &pgxBackend{db: c}
 
-	d.QueryValues(onedb.NewSqlQuery("query", "arg1", "arg2"))
+	d.QueryValues(onedb.NewQuery("query", "arg1", "arg2"))
 	queries := c.MethodsCalled["QueryRow"]
 	if len(c.MethodsCalled) != 1 || len(queries) != 1 {
 		t.Fatal("expected QueryRow method to be called on backend")

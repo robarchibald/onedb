@@ -10,17 +10,29 @@ import (
 	"strings"
 	"time"
 
+	"github.com/EndFirstCorp/onedb"
 	"github.com/pkg/errors"
-	"gopkg.in/ldap.v2"
+	ldap "gopkg.in/ldap.v2"
 )
+
+type LDAPer interface {
+	Bind(username, password string) error
+	Query(query *ldap.SearchRequest) (*ldap.SearchResult, error)
+
+	QueryJSON(query *ldap.SearchRequest) (string, error)
+	QueryJSONRow(query *ldap.SearchRequest) (string, error)
+	QueryStruct(result interface{}, query *ldap.SearchRequest) error
+	QueryStructRow(result interface{}, query *ldap.SearchRequest) error
+	QueryValues(query *ldap.SearchRequest, result ...interface{}) error
+}
 
 var errInvalidLdapQueryType = errors.New("Invalid query. Must be of type *ldap.SearchRequest")
 var errInvalidLdapExecType = errors.New("Invalid execute request. Must be of type *ldap.AddRequest, *ldap.DelRequest, *ldap.ModifyRequest or *ldap.PasswordModifyRequest")
-var ldapCreate ldapCreator = &ldapRealCreator{}
 
-type ldapCreator interface {
-	NewConn(conn net.Conn, isTLS bool) ldapBackender
-}
+type ldapNewConnFunc func(conn net.Conn, isTLS bool) ldapBackender
+
+var dialTCPFunc onedb.DialFunc = onedb.DialTCP
+var newConnFunc ldapNewConnFunc = (&ldapRealCreator{}).NewConn
 
 type ldapRealCreator struct{}
 
@@ -52,7 +64,7 @@ type ldapBackender interface {
 	//	SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error)
 }
 
-func NewLdap(hostname string, port int, binddn string, password string) (DBer, error) {
+func NewLdap(hostname string, port int, binddn string, password string) (LDAPer, error) {
 	l, err := ldapConnect(hostname, port, binddn, password)
 	if err != nil {
 		return nil, err
@@ -61,11 +73,11 @@ func NewLdap(hostname string, port int, binddn string, password string) (DBer, e
 }
 
 func ldapConnect(hostname string, port int, binddn string, password string) (ldapBackender, error) {
-	tc, err := DialHelper.Dial("tcp", fmt.Sprintf("%s:%d", hostname, port))
+	tc, err := dialTCPFunc("tcp", fmt.Sprintf("%s:%d", hostname, port))
 	if err != nil {
 		return nil, err
 	}
-	l := ldapCreate.NewConn(tc, false)
+	l := newConnFunc(tc, false)
 	l.Start()
 	if err = l.StartTLS(&tls.Config{ServerName: hostname}); err != nil {
 		return nil, err
@@ -82,7 +94,7 @@ func (c *ldapBackend) Bind(username, password string) error {
 	return c.l.Bind(username, password)
 }
 
-func (c *ldapBackend) QueryJSON(query interface{}) (string, error) {
+func (c *ldapBackend) QueryJSON(query *ldap.SearchRequest) (string, error) {
 	res, err := c.Query(query)
 	if err != nil {
 		return "", err
@@ -95,7 +107,7 @@ func (c *ldapBackend) QueryJSON(query interface{}) (string, error) {
 	return string(data), nil
 }
 
-func (c *ldapBackend) QueryJSONRow(query interface{}) (string, error) {
+func (c *ldapBackend) QueryJSONRow(query *ldap.SearchRequest) (string, error) {
 	res, err := c.Query(query)
 	if err != nil {
 		return "", err
@@ -114,9 +126,9 @@ type fieldInfo struct {
 	Kind  reflect.Kind
 }
 
-func (c *ldapBackend) QueryStruct(query interface{}, result interface{}) error {
+func (c *ldapBackend) QueryStruct(result interface{}, query *ldap.SearchRequest) error {
 	resultType := reflect.TypeOf(result)
-	if result == nil || !IsPointer(resultType) || !IsSlice(resultType.Elem()) {
+	if result == nil || !onedb.IsPointer(resultType) || !onedb.IsSlice(resultType.Elem()) {
 		return errors.New("Invalid result argument.  Must be a pointer to a slice")
 	}
 
@@ -170,8 +182,8 @@ func setRowValue(row reflect.Value, field *fieldInfo, vals []string) error {
 	return nil
 }
 
-func (c *ldapBackend) QueryValues(query interface{}, result ...interface{}) error {
-	if result == nil || !IsPointer(reflect.TypeOf(result)) || reflect.TypeOf(result).Elem().Kind() == reflect.Struct {
+func (c *ldapBackend) QueryValues(query *ldap.SearchRequest, result ...interface{}) error {
+	if result == nil || !onedb.IsPointer(reflect.TypeOf(result)) || reflect.TypeOf(result).Elem().Kind() == reflect.Struct {
 		return errors.New("Invalid result argument.  Must be a pointer to a primitive type")
 	}
 
@@ -190,8 +202,8 @@ func (c *ldapBackend) QueryValues(query interface{}, result ...interface{}) erro
 	return nil
 }
 
-func (c *ldapBackend) QueryStructRow(query interface{}, result interface{}) error {
-	if result == nil || !IsPointer(reflect.TypeOf(result)) {
+func (c *ldapBackend) QueryStructRow(result interface{}, query *ldap.SearchRequest) error {
+	if result == nil || !onedb.IsPointer(reflect.TypeOf(result)) {
 		return errors.New("Invalid result argument.  Must be a pointer to a struct")
 	}
 
@@ -241,12 +253,11 @@ func (l *ldapBackend) Execute(query interface{}) error {
 	return err
 }
 
-func (l *ldapBackend) Query(query interface{}) (*ldap.SearchResult, error) {
-	q, ok := query.(*ldap.SearchRequest)
-	if !ok {
-		return nil, errInvalidLdapQueryType
+func (l *ldapBackend) Query(query *ldap.SearchRequest) (*ldap.SearchResult, error) {
+	if query == nil {
+		return nil, onedb.ErrQueryIsNil
 	}
-	res, err := l.l.Search(q)
+	res, err := l.l.Search(query)
 	if err != nil && strings.HasSuffix(err.Error(), "ldap: connection closed") && l.reconnect() {
 		return l.Query(query)
 	}

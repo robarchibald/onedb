@@ -40,7 +40,7 @@ func (r *mockDb) Backend() interface{} {
 	return nil
 }
 
-func (r *mockDb) QueryValues(query *SqlQuery, result ...interface{}) error {
+func (r *mockDb) QueryValues(query *Query, result ...interface{}) error {
 	r.SaveMethodCall("QueryValues", append([]interface{}{query}, result...))
 	return nil
 }

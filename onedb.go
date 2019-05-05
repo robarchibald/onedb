@@ -1,13 +1,15 @@
 package onedb
 
 import (
+	"net"
 	"reflect"
+	"time"
 
 	"github.com/pkg/errors"
 )
 
 // QueryValues runs a query against the provided Backender and populates result values
-func QueryValues(backend Backender, query *SqlQuery, result ...interface{}) error {
+func QueryValues(backend Backender, query *Query, result ...interface{}) error {
 	if query == nil {
 		return ErrQueryIsNil
 	}
@@ -40,7 +42,7 @@ func QueryJSONRow(backend Backender, query string, args ...interface{}) (string,
 // QueryStruct runs a query against the provided Backender and populates the provided result
 func QueryStruct(backend Backender, result interface{}, query string, args ...interface{}) error {
 	resultType := reflect.TypeOf(result)
-	if !isPointer(resultType) || !isSlice(resultType.Elem()) {
+	if !IsPointer(resultType) || !IsSlice(resultType.Elem()) {
 		return errors.New("Invalid result argument.  Must be a pointer to a slice")
 	}
 
@@ -55,7 +57,7 @@ func QueryStruct(backend Backender, result interface{}, query string, args ...in
 
 // QueryStructRow runs a query against the provided Backender and populates the provided result
 func QueryStructRow(backend Backender, result interface{}, query string, args ...interface{}) error {
-	if !isPointer(reflect.TypeOf(result)) {
+	if !IsPointer(reflect.TypeOf(result)) {
 		return errors.New("Invalid result argument.  Must be a pointer to a struct")
 	}
 
@@ -68,10 +70,50 @@ func QueryStructRow(backend Backender, result interface{}, query string, args ..
 	return GetStructRow(rows, result)
 }
 
-func isPointer(item reflect.Type) bool {
+func IsPointer(item reflect.Type) bool {
 	return item.Kind() == reflect.Ptr
 }
 
-func isSlice(item reflect.Type) bool {
+func IsSlice(item reflect.Type) bool {
 	return item.Kind() == reflect.Slice
+}
+
+// Query is a generic struct that houses a query string and arguments used to construct a query
+type Query struct {
+	Query string
+	Args  []interface{}
+}
+
+// NewQuery is tne constructor for a Query struct
+func NewQuery(query string, args ...interface{}) *Query {
+	return &Query{Query: query, Args: args}
+}
+
+// DialFunc is the shape of the function used to dial a TCP connection
+type DialFunc func(network, addr string) (net.Conn, error)
+
+// NewMockDialer returns a onedb.DialFunc for testing purposes
+func NewMockDialer(err error) DialFunc {
+	return func(network, addr string) (net.Conn, error) {
+		return nil, err
+	}
+}
+
+// DialTCP is a helper function that will dial a TCP port and set a 2 minute time period
+func DialTCP(network, addr string) (net.Conn, error) {
+	tcpAddr, err := net.ResolveTCPAddr(network, addr)
+	if err != nil {
+		return nil, err
+	}
+	tc, err := net.DialTCP(network, nil, tcpAddr)
+	if err != nil {
+		return nil, err
+	}
+	if err := tc.SetKeepAlive(true); err != nil {
+		return nil, err
+	}
+	if err := tc.SetKeepAlivePeriod(2 * time.Minute); err != nil {
+		return nil, err
+	}
+	return tc, nil
 }

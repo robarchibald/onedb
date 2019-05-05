@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestBackendConverterQueryJson(t *testing.T) {
+func TestQueryJson(t *testing.T) {
 	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	db := &mockBackend{Rows: rows}
 
@@ -26,7 +26,7 @@ func TestBackendConverterQueryJson(t *testing.T) {
 	}
 }
 
-func TestBackendConverterQueryJsonRow(t *testing.T) {
+func TestQueryJsonRow(t *testing.T) {
 	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	db := &mockBackend{Rows: rows}
 
@@ -45,7 +45,7 @@ func TestBackendConverterQueryJsonRow(t *testing.T) {
 	}
 }
 
-func TestBackendConverterQueryStruct(t *testing.T) {
+func TestQueryStruct(t *testing.T) {
 	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	db := &mockBackend{Rows: rows}
 	data := []SimpleData{}
@@ -70,7 +70,7 @@ func TestBackendConverterQueryStruct(t *testing.T) {
 	}
 }
 
-func TestBackendConverterQueryStructRow(t *testing.T) {
+func TestQueryStructRow(t *testing.T) {
 	rows := newMockRowsScanner([]SimpleData{SimpleData{1, "hello"}})
 	db := &mockBackend{Rows: rows}
 	data := SimpleData{}
@@ -92,6 +92,13 @@ func TestBackendConverterQueryStructRow(t *testing.T) {
 	err = QueryStructRow(db, &data, "query")
 	if err == nil {
 		t.Error("expected error", err)
+	}
+}
+
+func TestNewQuery(t *testing.T) {
+	q := NewQuery("query", "arg1", "arg2")
+	if q == nil || q.Query != "query" || len(q.Args) != 2 || q.Args[0] != "arg1" || q.Args[1] != "arg2" {
+		t.Error("expected success")
 	}
 }
 

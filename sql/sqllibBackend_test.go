@@ -1,19 +1,15 @@
-package onedb
+package sql
 
 import (
-	"database/sql"
+	sqllib "database/sql"
 	"errors"
+	"reflect"
 	"testing"
+
+	"github.com/EndFirstCorp/onedb"
 )
 
 const connectionString string = "server=localhost;user id=gotest;password=go;database=GoTest;encrypt=disable"
-
-func TestNewSqlQuery(t *testing.T) {
-	q := NewSqlQuery("query", "arg1", "arg2")
-	if q == nil || q.query != "query" || len(q.args) != 2 || q.args[0] != "arg1" || q.args[1] != "arg2" {
-		t.Error("expected success")
-	}
-}
 
 func TestNewSqllibOneDB(t *testing.T) {
 	sqllibCreate = &sqllibMockCreator{}
@@ -50,7 +46,7 @@ func TestSqllibClose(t *testing.T) {
 	c := newMockSqllibBackend()
 	d := &sqllibBackend{db: c}
 	d.Close()
-	if len(c.MethodsCalled) != 1 || len(c.MethodsCalled["Close"]) != 1 {
+	if len(c.MethodsRun) != 1 || c.MethodsRun[0].MethodName != "Close" {
 		t.Error("expected close method to be called on backend")
 	}
 }
@@ -63,14 +59,11 @@ func TestSqllibQuery(t *testing.T) {
 		t.Error("expected error")
 	}
 
-	d.Query(NewSqlQuery("query", "arg1", "arg2"))
-	queries := c.MethodsCalled["Query"]
-	if len(c.MethodsCalled) != 1 || len(queries) != 1 ||
-		queries[0].(*SqlQuery).query != "query" ||
-		queries[0].(*SqlQuery).args[0] != "arg1" ||
-		queries[0].(*SqlQuery).args[1] != "arg2" {
-		t.Error("expected query method to be called on backend")
+	d.Query("query", "arg1", "arg2")
+	if len(c.MethodsRun) != 1 || c.MethodsRun[0].MethodName != "Query" {
+		t.Fatal("expected query method to be called on backend")
 	}
+	verifyArgs(t, c.MethodsRun[0].Arguments, "query", "arg1", "arg2")
 }
 
 func TestSqllibExecute(t *testing.T) {
@@ -81,14 +74,11 @@ func TestSqllibExecute(t *testing.T) {
 		t.Error("expected error")
 	}
 
-	d.Execute(NewSqlQuery("query", "arg1", "arg2"))
-	queries := c.MethodsCalled["Exec"]
-	if len(c.MethodsCalled) != 1 || len(queries) != 1 ||
-		queries[0].(*SqlQuery).query != "query" ||
-		queries[0].(*SqlQuery).args[0] != "arg1" ||
-		queries[0].(*SqlQuery).args[1] != "arg2" {
-		t.Error("expected query method to be called on backend")
+	d.Execute("query", "arg1", "arg2")
+	if len(c.MethodsRun) != 1 || c.MethodsRun[0].MethodName != "Exec" {
+		t.Fatal("expected Exec method to be called on backend")
 	}
+	verifyArgs(t, c.MethodsRun[0].Arguments, "query", "arg1", "arg2")
 }
 
 /***************************** MOCKS ****************************/
@@ -105,12 +95,16 @@ func (s *sqllibMockCreator) Open(driverName, dataSourceName string) (sqlLibBacke
 }
 
 type mockSqllibBackend struct {
-	MethodsCalled map[string][]interface{}
-	PingErr       error
+	MethodsRun []onedb.MethodsRun
+	PingErr    error
 }
 
 func newMockSqllibBackend() *mockSqllibBackend {
-	return &mockSqllibBackend{MethodsCalled: make(map[string][]interface{})}
+	return &mockSqllibBackend{}
+}
+
+func (c *mockSqllibBackend) SaveMethodCall(name string, arguments []interface{}) {
+	c.MethodsRun = append(c.MethodsRun, onedb.MethodsRun{name, arguments})
 }
 
 func (c *mockSqllibBackend) Ping() error {
@@ -118,18 +112,29 @@ func (c *mockSqllibBackend) Ping() error {
 }
 
 func (c *mockSqllibBackend) Close() error {
-	c.MethodsCalled["Close"] = append(c.MethodsCalled["Close"], nil)
+	c.SaveMethodCall("Close", nil)
 	return nil
 }
-func (c *mockSqllibBackend) Exec(query string, args ...interface{}) (sql.Result, error) {
-	c.MethodsCalled["Exec"] = append(c.MethodsCalled["Exec"], NewSqlQuery(query, args...))
+func (c *mockSqllibBackend) Exec(query string, args ...interface{}) (sqllib.Result, error) {
+	c.SaveMethodCall("Exec", append([]interface{}{query}, args...))
 	return nil, nil
 }
-func (c *mockSqllibBackend) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	c.MethodsCalled["Query"] = append(c.MethodsCalled["Query"], NewSqlQuery(query, args...))
+func (c *mockSqllibBackend) Query(query string, args ...interface{}) (*sqllib.Rows, error) {
+	c.SaveMethodCall("QueryRow", append([]interface{}{query}, args...))
 	return nil, nil
 }
-func (c *mockSqllibBackend) QueryRow(query string, args ...interface{}) *sql.Row {
-	c.MethodsCalled["QueryRow"] = append(c.MethodsCalled["QueryRow"], NewSqlQuery(query, args...))
+func (c *mockSqllibBackend) QueryRow(query string, args ...interface{}) *sqllib.Row {
+	c.SaveMethodCall("QueryRow", append([]interface{}{query}, args...))
 	return nil
+}
+
+func verifyArgs(t *testing.T, actual []interface{}, expected ...interface{}) {
+	if len(expected) != len(actual) {
+		t.Fatal("Number of arguments don't match. Expected:", len(expected), "actual:", len(actual))
+	}
+	for i := range actual {
+		if !reflect.DeepEqual(actual[i], expected[i]) {
+			t.Errorf("Argument mismatch at %d. Expected:%v, Actual:%v\n", i, expected[i], actual[i])
+		}
+	}
 }

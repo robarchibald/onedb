@@ -114,9 +114,7 @@ type pgxRows struct {
 
 // AfterClose adds f to a LILO queue of functions that will be called when
 // rows is closed.
-func (r *pgxRows) AfterClose(f func(Rower)) {
-
-}
+func (r *pgxRows) AfterClose(f func(Rower)) {}
 
 func (r *pgxRows) Columns() ([]string, error) {
 	fields := r.rows.FieldDescriptions()

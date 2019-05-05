@@ -6,30 +6,32 @@ import (
 	"net"
 	"testing"
 
-	"gopkg.in/ldap.v2"
+	"github.com/EndFirstCorp/onedb"
+	ldap "gopkg.in/ldap.v2"
 )
 
 func TestNewLdap(t *testing.T) {
-	DialHelper = &mockDialer{}
-	ldapCreate = &ldapMockCreator{}
+	dialTCPFunc = onedb.NewMockDialer(nil)
+	newConnFunc = newMockLDAPCreator(nil, nil)
 	_, err := NewLdap("localhost", 389, "user", "password")
 	if err != nil {
 		t.Error("expected success", err)
 	}
 
-	DialHelper = &mockDialer{Err: errors.New("fail")}
+	dialTCPFunc = onedb.NewMockDialer(errors.New("fail"))
 	_, err = NewLdap("localhost", 389, "user", "password")
 	if err == nil {
 		t.Error("expected fail")
 	}
 
-	ldapCreate = &ldapMockCreator{StartTLSErr: errors.New("fail")}
+	dialTCPFunc = onedb.NewMockDialer(nil)
+	newConnFunc = newMockLDAPCreator(errors.New("fail"), nil)
 	_, err = NewLdap("localhost", 389, "user", "password")
 	if err == nil {
 		t.Error("expected fail on StartTLS")
 	}
 
-	ldapCreate = &ldapMockCreator{BindErr: errors.New("fail")}
+	newConnFunc = newMockLDAPCreator(nil, errors.New("fail"))
 	_, err = NewLdap("localhost", 389, "user", "password")
 	if err == nil {
 		t.Error("Expected Bind error")
@@ -40,7 +42,8 @@ func TestNewLdapDBRealConnection(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	ldapCreate = &ldapRealCreator{}
+	dialTCPFunc = onedb.DialTCP
+	newConnFunc = (&ldapRealCreator{}).NewConn
 	_, err := NewLdap("localhost", 389, "user", "password")
 	if err != nil {
 		t.Error("expected connection success", err)
@@ -68,8 +71,8 @@ func TestLdapBackend(t *testing.T) {
 func TestLdapQuery(t *testing.T) {
 	m := newMockLdap()
 	l := &ldapBackend{l: m}
-	_, err := l.Query("bogus")
-	if err == nil || err != errInvalidLdapQueryType {
+	_, err := l.Query(nil)
+	if err != onedb.ErrQueryIsNil {
 		t.Error("expected error")
 	}
 
@@ -104,7 +107,7 @@ func TestLdapQueryStruct(t *testing.T) {
 	l := &ldapBackend{l: m}
 	r := ldap.NewSearchRequest("baseDn", ldap.ScopeSingleLevel, ldap.NeverDerefAliases, 0, 0, false, "filter", []string{"attributes"}, nil)
 	d := []ldapQueryStruct{}
-	err := l.QueryStruct(r, &d)
+	err := l.QueryStruct(&d, r)
 	if err != nil || d[0].Test[0] != "1" || d[0].Test[1] != "2" || d[1].Test[0] != "1" || d[1].Test[1] != "2" || d[0].Test2[0] != "3" || d[0].Test2[1] != "4" || d[1].Test2[0] != "3" || d[1].Test2[1] != "4" {
 		t.Error("expected error", err, d)
 	}
@@ -222,13 +225,10 @@ type mockLdapData struct {
 	HomeDirectory string
 }
 
-type ldapMockCreator struct {
-	StartTLSErr error
-	BindErr     error
-}
-
-func (l *ldapMockCreator) NewConn(conn net.Conn, isTLS bool) ldapBackender {
-	return &mockLdapBackend{MethodsCalled: make(map[string][]interface{}), StartTLSErr: l.StartTLSErr, BindErr: l.BindErr}
+func newMockLDAPCreator(startTLSErr, bindErr error) ldapNewConnFunc {
+	return func(conn net.Conn, isTLS bool) ldapBackender {
+		return &mockLdapBackend{MethodsCalled: make(map[string][]interface{}), StartTLSErr: startTLSErr, BindErr: bindErr}
+	}
 }
 
 type mockLdapBackend struct {

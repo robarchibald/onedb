@@ -24,7 +24,7 @@ type Scanner interface {
 
 // DBer is the added interface that onedb can enable for database querying
 type DBer interface {
-	QueryValues(query *SqlQuery, result ...interface{}) error
+	QueryValues(query *Query, result ...interface{}) error
 	QueryJSON(query string, args ...interface{}) (string, error)
 	QueryJSONRow(query string, args ...interface{}) (string, error)
 	QueryStruct(result interface{}, query string, args ...interface{}) error

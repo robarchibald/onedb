@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestQueryJson(t *testing.T) {
+func TestMockDBQueryJson(t *testing.T) {
 	d := NewMock(nil, nil, "hello", []SimpleData{SimpleData{1, "hello"}})
 	json, err := d.QueryJSON("select query")
 	if json != "hello" {
@@ -23,7 +23,7 @@ func TestQueryJson(t *testing.T) {
 	}
 }
 
-func TestQueryJsonRow(t *testing.T) {
+func TestMockDBQueryJsonRow(t *testing.T) {
 	d := NewMock(nil, nil, SimpleData{1, "hello"})
 	json, err := d.QueryJSON("select query2")
 	if json != `{"IntVal":1,"StringVal":"hello"}` {
@@ -36,7 +36,7 @@ func TestQueryJsonRow(t *testing.T) {
 	}
 }
 
-func TestQueryStruct(t *testing.T) {
+func TestMockDBQueryStruct(t *testing.T) {
 	result := []SimpleData{}
 	d := NewMock(nil, nil)
 	err := d.QueryStruct(result, "select query")
@@ -63,7 +63,7 @@ func TestQueryStruct(t *testing.T) {
 	}
 }
 
-func TestQueryStructRow(t *testing.T) {
+func TestMockDBQueryStructRow(t *testing.T) {
 	result := SimpleData{}
 	d := NewMock(nil, nil)
 	err := d.QueryStructRow(result, "select query")
