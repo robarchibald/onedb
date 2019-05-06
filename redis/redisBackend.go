@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"strconv"
 	"time"
+
+	"github.com/EndFirstCorp/onedb"
+	"github.com/garyburd/redigo/redis"
 )
 
 var errInvalidRedisQueryType = errors.New("Invalid query. Must be of type *RedisCommand")
@@ -26,7 +28,7 @@ func (c *redisRealCreator) newConnPool(server string, port int, password string,
 		MaxIdle:   maxIdle,
 		MaxActive: maxConnections,
 		Dial: func() (redis.Conn, error) {
-			tc, err := dialHelper.Dial("tcp", fmt.Sprintf("%s:%d", server, port))
+			tc, err := onedb.DialTCP("tcp", fmt.Sprintf("%s:%d", server, port))
 			if err != nil {
 				return nil, err
 			}
@@ -63,7 +65,7 @@ type redisBackend struct {
 	pool redisBackender
 }
 
-func NewRedis(server string, port int, password string, maxIdle, maxConnections int) DBer {
+func NewRedis(server string, port int, password string, maxIdle, maxConnections int) onedb.DBer {
 	return &redisBackend{redisCreate.newConnPool(server, port, password, maxIdle, maxConnections)}
 }
 
@@ -91,52 +93,33 @@ func (r *redisBackend) Close() error {
 	return r.pool.Close()
 }
 
-func (r *redisBackend) Execute(query interface{}) error {
-	q, ok := query.(*RedisCommand)
-	if !ok || len(q.Args) == 0 {
-		return errInvalidRedisQueryType
-	}
+func (r *redisBackend) Do(command string, args ...interface{}) (interface{}, error) {
 	c := r.pool.Get()
 	defer c.Close()
 
-	_, err := c.Do(q.Command, q.Args...)
-	return err
+	return c.Do(command, args...)
 }
 
-func (r *redisBackend) QueryValues(query interface{}, result ...interface{}) error {
+func (r *redisBackend) QueryValues(query *onedb.Query, result ...interface{}) error {
 	return nil
 }
 
-func (r *redisBackend) QueryJSON(query interface{}) (string, error) {
-	q, ok := query.(*RedisCommand)
-	if !ok || len(q.Args) == 0 {
-		return "", errInvalidRedisQueryType
-	}
-	c := r.pool.Get()
-	defer c.Close()
-
-	return redis.String(c.Do("GET", q.Args[0]))
+func (r *redisBackend) QueryJSON(command string, args ...interface{}) (string, error) {
+	return redis.String(r.Do(command, args...))
 }
 
-func (r *redisBackend) QueryJSONRow(query interface{}) (string, error) {
-	return r.QueryJSON(query)
+func (r *redisBackend) QueryJSONRow(command string, args ...interface{}) (string, error) {
+	return r.QueryJSON(command, args...)
 }
 
-func (r *redisBackend) QueryStruct(query interface{}, result interface{}) error {
-	q, ok := query.(*RedisCommand)
-	if !ok || len(q.Args) == 0 {
-		return errInvalidRedisQueryType
-	}
-	c := r.pool.Get()
-	defer c.Close()
-
-	data, err := redis.Bytes(c.Do("GET", q.Args[0]))
+func (r *redisBackend) QueryStruct(result interface{}, command string, args ...interface{}) error {
+	data, err := redis.Bytes(r.Do(command, args...))
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal(data, result)
 }
 
-func (r *redisBackend) QueryStructRow(query interface{}, result interface{}) error {
-	return r.QueryStruct(query, result)
+func (r *redisBackend) QueryStructRow(result interface{}, command string, args ...interface{}) error {
+	return r.QueryStruct(result, command, args...)
 }

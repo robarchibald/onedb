@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func getStruct(rows rowsScanner, result interface{}) error {
+func getStruct(rows RowsScanner, result interface{}) error {
 	columns, vals, err := getColumnNamesAndValues(rows, false)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func getStruct(rows rowsScanner, result interface{}) error {
 	return nil
 }
 
-func getStructRow(rows rowsScanner, result interface{}) error {
+func getStructRow(rows RowsScanner, result interface{}) error {
 	if !rows.Next() {
 		return errors.New("Empty result set")
 	}
@@ -44,7 +44,7 @@ func getStructRow(rows rowsScanner, result interface{}) error {
 	return nil
 }
 
-func scanStruct(s scanner, vals []interface{}, dbToStruct map[int]structFieldInfo, result interface{}) error {
+func scanStruct(s Scanner, vals []interface{}, dbToStruct map[int]structFieldInfo, result interface{}) error {
 	err := s.Scan(vals...)
 	if err != nil {
 		return err

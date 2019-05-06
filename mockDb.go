@@ -1,122 +1,197 @@
 package onedb
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
 )
 
 type mockDb struct {
-	data     []interface{}
-	queries  []interface{}
-	closeErr error
-	execErr  error
+	data       []interface{}
+	methodsRun []MethodsRun
+	closeErr   error
+	execErr    error
 }
 
+// MethodsRun contains the name of the method run and a slice of arguments
+type MethodsRun struct {
+	MethodName string
+	Arguments  []interface{}
+}
+
+// MockDBer is a fake database that can be used in place of a pgx or sql lib database for testing
 type MockDBer interface {
 	DBer
-	QueriesRun() []interface{}
+	QueriesRun() []MethodsRun
 }
 
+// NewMock will create an instance that implements the MockDBer interface
 func NewMock(closeErr, execErr error, data ...interface{}) MockDBer {
-	queries := []interface{}{}
+	queries := []MethodsRun{}
 	return &mockDb{data, queries, closeErr, execErr}
+}
+
+func (r *mockDb) SaveMethodCall(name string, arguments []interface{}) {
+	r.methodsRun = append(r.methodsRun, MethodsRun{name, arguments})
 }
 
 func (r *mockDb) Backend() interface{} {
 	return nil
 }
 
-func (r *mockDb) QueryValues(query interface{}, result ...interface{}) error {
-	r.queries = append(r.queries, query)
-	return nil
+func (r *mockDb) Query(query string, args ...interface{}) (RowsScanner, error) {
+	return r.nextScanner()
 }
 
-func (r *mockDb) QueryJSON(query interface{}) (string, error) {
-	r.queries = append(r.queries, query)
-	return r.nextJSON()
+func (r *mockDb) QueryRow(query string, args ...interface{}) Scanner {
+	s, _ := r.nextScanner()
+	return s
 }
 
-func (r *mockDb) QueryJSONRow(query interface{}) (string, error) {
-	r.queries = append(r.queries, query)
-	return r.nextJSON()
+func (r *mockDb) QueryValues(query *Query, result ...interface{}) error {
+	r.SaveMethodCall("QueryValues", append([]interface{}{query}, result...))
+	return QueryValues(r, query, result...)
 }
 
-func (r *mockDb) QueryStruct(query interface{}, result interface{}) error {
-	r.queries = append(r.queries, query)
-	resultType := reflect.TypeOf(result)
-	if resultType.Kind() != reflect.Ptr || resultType.Elem().Kind() != reflect.Slice || resultType.Elem().Elem().Kind() != reflect.Struct {
-		return errors.New("result must be a pointer to a slice of structs")
-	}
-	data, err := r.nextStruct()
-	if err != nil {
-		return err
-	}
-	return setDest(data, result)
+func (r *mockDb) QueryJSON(query string, args ...interface{}) (string, error) {
+	r.SaveMethodCall("QueryJSON", append([]interface{}{query}, args...))
+	return QueryJSON(r, query, args...)
 }
 
-func (r *mockDb) QueryStructRow(query interface{}, result interface{}) error {
-	r.queries = append(r.queries, query)
-	resultType := reflect.TypeOf(result)
-	if resultType.Kind() != reflect.Ptr || resultType.Elem().Kind() != reflect.Struct {
-		return errors.New("result must be a pointer to a struct")
-	}
-	data, err := r.nextStruct()
-	if err != nil {
-		return err
-	}
-	return setDest(data, result)
+func (r *mockDb) QueryJSONRow(query string, args ...interface{}) (string, error) {
+	r.SaveMethodCall("QueryJSONRow", append([]interface{}{query}, args...))
+	return QueryJSONRow(r, query, args...)
+}
+
+func (r *mockDb) QueryStruct(result interface{}, query string, args ...interface{}) error {
+	r.SaveMethodCall("QueryStruct", append([]interface{}{result, query}, args...))
+	return QueryStruct(r, result, query, args...)
+}
+
+func (r *mockDb) QueryStructRow(result interface{}, query string, args ...interface{}) error {
+	return QueryStructRow(r, result, query, args...)
 }
 
 func (r *mockDb) Close() error {
 	return r.closeErr
 }
 
-func (r *mockDb) Execute(query interface{}) error {
-	r.queries = append(r.queries, query)
+func (r *mockDb) Execute(query string, args ...interface{}) error {
+	r.SaveMethodCall("Execute", append([]interface{}{query}, args...))
 	return r.execErr
 }
 
-func (r *mockDb) QueriesRun() []interface{} {
-	return r.queries
+func (r *mockDb) QueriesRun() []MethodsRun {
+	return r.methodsRun
 }
 
-func (r *mockDb) nextJSON() (string, error) {
-	data, err := r.nextStruct()
-	if err != nil {
-		return "", err
-	}
-
-	dataStr, ok := data.(string)
-	if ok {
-		return dataStr, nil
-	}
-
-	output, err := json.Marshal(data)
-	return string(output), err
-}
-
-func (r *mockDb) nextStruct() (interface{}, error) {
+func (r *mockDb) nextScanner() (RowsScanner, error) {
 	if len(r.data) == 0 {
-		return "", errors.New("no mock data found to return")
+		err := errors.New("no mock data found to return")
+		return &mockRowsScanner{ErrErr: err}, err
 	}
 	data := r.data[0]
 	r.data = r.data[1:]
-	return data, nil
+	return NewRowsScanner(data), nil
 }
 
-func setDest(source interface{}, dest interface{}) error {
-	sourceType := reflect.TypeOf(source)
-	destType := reflect.TypeOf(dest)
-	if sourceType != destType.Elem() {
-		return fmt.Errorf("expected types to match. source: %v, dest: %v", sourceType, destType)
+type mockRowsScanner struct {
+	sliceValue reflect.Value
+	sliceLen   int
+	structType reflect.Type
+	structLen  int
+	data       interface{}
+	currentRow int
+	ColumnsErr error
+	ScanErr    error
+	ErrErr     error
+}
+
+// NewRowsScanner returns a RowsScanner that can scan through a slice of data
+func NewRowsScanner(data interface{}) RowsScanner {
+	if data == nil || reflect.TypeOf(data).Kind() != reflect.Slice || reflect.TypeOf(data).Elem().Kind() != reflect.Struct {
+		return &mockRowsScanner{ScanErr: ErrRowsScannerInvalidData, ErrErr: ErrRowsScannerInvalidData}
+	}
+	sliceValue := reflect.ValueOf(data)
+	sliceLen := sliceValue.Len()
+	structType := reflect.TypeOf(data).Elem()
+	structLen := structType.NumField()
+
+	return &mockRowsScanner{data: data, currentRow: -1, sliceValue: sliceValue, sliceLen: sliceLen, structType: structType, structLen: structLen}
+}
+
+func (r *mockRowsScanner) Columns() ([]string, error) {
+	if r.ColumnsErr != nil {
+		return nil, r.ColumnsErr
 	}
 
-	destValue := reflect.ValueOf(dest)
-	sourceValue := reflect.ValueOf(source)
-	destValue.Elem().Set(sourceValue)
+	columns := make([]string, r.structLen)
+	for i := 0; i < r.structLen; i++ {
+		columns[i] = r.structType.Field(i).Name
+	}
+	return columns, nil
+}
+
+func (r *mockRowsScanner) Next() bool {
+	r.currentRow++
+	if r.currentRow >= r.sliceLen {
+		return false
+	}
+	return true
+}
+func (r *mockRowsScanner) Close() error {
 	return nil
+}
+
+func (r *mockRowsScanner) Scan(dest ...interface{}) error {
+	if r.ScanErr != nil {
+		return r.ScanErr
+	}
+	if r.currentRow >= r.sliceLen || r.currentRow < 0 {
+		return errors.New("invalid current row")
+	}
+	return setDestValue(r.sliceValue.Index(r.currentRow), dest)
+}
+
+func setDestValue(structVal reflect.Value, dest []interface{}) error {
+	if len(dest) != structVal.NumField() {
+		return fmt.Errorf("expected equal number of dest values as source. Expected: %d, Actual: %d", structVal.NumField(), len(dest))
+	}
+	for i := range dest {
+		destination := reflect.ValueOf(dest[i]).Elem()
+		source := structVal.Field(i)
+		if destination.Type() != source.Type() && destination.Type().Kind() != reflect.Interface {
+			return fmt.Errorf("source and destination types do not match at index: %d", i)
+		}
+		destination.Set(source)
+	}
+	return nil
+}
+
+func (r *mockRowsScanner) Err() error {
+	return r.ErrErr
+}
+
+type mockScanner struct {
+	structValue reflect.Value
+	data        interface{}
+	ScanErr     error
+}
+
+// NewScanner returns a Scanner that can run Scan on a struct or pointer to struct
+func NewScanner(data interface{}) Scanner {
+	if data == nil || reflect.TypeOf(data).Kind() != reflect.Ptr || reflect.TypeOf(data).Elem().Kind() != reflect.Struct {
+		return &mockScanner{ScanErr: ErrRowScannerInvalidData}
+	}
+	structValue := reflect.ValueOf(data).Elem()
+	return &mockScanner{data: data, structValue: structValue}
+}
+
+func (s *mockScanner) Scan(dest ...interface{}) error {
+	if s.ScanErr != nil {
+		return s.ScanErr
+	}
+	return setDestValue(s.structValue, dest)
 }
 
 type errorScanner struct {
