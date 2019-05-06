@@ -1,4 +1,4 @@
-package onedb
+package redis
 
 import (
 	"encoding/json"
