@@ -18,9 +18,11 @@ type pgxWrapper interface {
 	CopyFrom(tableName Identifier, columnNames []string, rowSrc CopyFromSource) (int, error)
 }
 
+// Rower is the public interface for all the capability found in a *pgx.Rows. Note that the Close method
+// returns an error similar to how database/sql's rows Close returns and error
 type Rower interface {
 	AfterClose(f func(Rower)) // modified from pgxRower to use interface
-	Close()
+	Close() error             // modified from pgxRower to match database/sql
 	Conn() *pgx.Conn
 	Err() error
 	Fatal(err error)
@@ -134,8 +136,9 @@ func (r *pgxRows) Next() bool {
 
 // Close closes the rows, making the connection ready for use again. It is safe
 // to call Close after rows is already closed.
-func (r *pgxRows) Close() {
+func (r *pgxRows) Close() error {
 	r.rows.Close()
+	return nil
 }
 
 // Conn returns the *Conn this *Rows is using.

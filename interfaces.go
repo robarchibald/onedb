@@ -10,7 +10,7 @@ type Backender interface {
 
 // RowsScanner is the rows interface needed by onedb to enable QueryStruct and QueryJSON capability
 type RowsScanner interface {
-	Close()
+	Close() error
 	Columns() ([]string, error)
 	Next() bool
 	Err() error
