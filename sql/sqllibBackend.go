@@ -8,29 +8,22 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-var sqllibCreate sqllibCreator = &sqllibRealCreator{}
+type openDatabaseFunc func(driverName, dataSourceName string) (sqlLibBackender, error)
 
-type sqllibCreator interface {
-	Open(driverName, dataSourceName string) (sqlLibBackender, error)
-}
+var openDatabase openDatabaseFunc = sqllibOpen
 
-type sqllibRealCreator struct{}
-
-func (o *sqllibRealCreator) Open(driverName, dataSourceName string) (sqlLibBackender, error) {
+func sqllibOpen(driverName, dataSourceName string) (sqlLibBackender, error) {
 	return sqllib.Open(driverName, dataSourceName)
 }
 
 type sqllibBackend struct {
 	db sqlLibBackender
-	backender
+	onedb.Backender
 }
 
-//move me
-type backender interface {
-	Close() error
-	Execute(query interface{}) error
-	Query(query interface{}) (onedb.RowsScanner, error)
-	QueryRow(query interface{}) onedb.Scanner
+// SQLer is the interface containing the capability available for a database/sql database
+type SQLer interface {
+	onedb.DBer
 }
 
 type sqlLibBackender interface {
@@ -40,8 +33,9 @@ type sqlLibBackender interface {
 	Query(query string, args ...interface{}) (*sqllib.Rows, error)
 }
 
-func NewSqllib(driverName, connectionString string) (onedb.DBer, error) {
-	sqlDb, err := sqllibCreate.Open(driverName, connectionString)
+// NewSqllib creates an instance of a database/sql database
+func NewSqllib(driverName, connectionString string) (SQLer, error) {
+	sqlDb, err := openDatabase(driverName, connectionString)
 	if err != nil {
 		return nil, err
 	}

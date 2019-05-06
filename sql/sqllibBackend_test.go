@@ -12,19 +12,19 @@ import (
 const connectionString string = "server=localhost;user id=gotest;password=go;database=GoTest;encrypt=disable"
 
 func TestNewSqllibOneDB(t *testing.T) {
-	sqllibCreate = &sqllibMockCreator{}
+	openDatabase = newSqllibMockCreator(&mockSqllibBackend{}, nil)
 	_, err := NewSqllib("mssql", connectionString)
 	if err != nil {
 		t.Error("expected success")
 	}
 
-	sqllibCreate = &sqllibMockCreator{Err: errors.New("fail")}
+	openDatabase = newSqllibMockCreator(nil, errors.New("fail"))
 	_, err = NewSqllib("mssql", connectionString)
 	if err == nil {
 		t.Error("expected error")
 	}
 
-	sqllibCreate = &sqllibMockCreator{conn: &mockSqllibBackend{PingErr: errors.New("fail")}}
+	openDatabase = newSqllibMockCreator(&mockSqllibBackend{PingErr: errors.New("fail")}, nil)
 	_, err = NewSqllib("mssql", connectionString)
 	if err == nil {
 		t.Error("expected fail on ping")
@@ -35,7 +35,7 @@ func TestNewSqllibOneDBRealConnection(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	sqllibCreate = &sqllibRealCreator{}
+	openDatabase = sqllibOpen
 	_, err := NewSqllib("mssql", connectionString)
 	if err != nil {
 		t.Error("expected connection success", err)
@@ -74,6 +74,12 @@ func TestSqllibExecute(t *testing.T) {
 }
 
 /***************************** MOCKS ****************************/
+func newSqllibMockCreator(conn sqlLibBackender, err error) openDatabaseFunc {
+	return func(driverName, dataSourceName string) (sqlLibBackender, error) {
+		return conn, err
+	}
+}
+
 type sqllibMockCreator struct {
 	conn sqlLibBackender
 	Err  error
