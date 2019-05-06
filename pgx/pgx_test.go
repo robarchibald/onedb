@@ -35,7 +35,7 @@ func TestNewPgx(t *testing.T) {
 }
 
 func TestPgxClose(t *testing.T) {
-	c := newMockPgx()
+	c := newMockPgx(nil, nil)
 	d := &pgxBackend{db: c}
 	d.Close()
 	if len(c.MethodsCalled) != 1 || len(c.MethodsCalled["Close"]) != 1 {
@@ -44,7 +44,7 @@ func TestPgxClose(t *testing.T) {
 }
 
 func TestPgxQuery(t *testing.T) {
-	c := newMockPgx()
+	c := newMockPgx(nil, nil)
 	d := &pgxBackend{db: c}
 
 	d.Query("query", "arg1", "arg2")
@@ -57,7 +57,7 @@ func TestPgxQuery(t *testing.T) {
 
 func verifyArgs(t *testing.T, actual []interface{}, expected ...interface{}) {
 	if len(expected) != len(actual) {
-		t.Fatal("Number of arguments don't match. Expected:", len(expected), "actual:", len(actual))
+		t.Fatal("Number of arguments don't match. Expected:", len(expected), expected, "actual:", len(actual), actual)
 	}
 	for i := range actual {
 		if !reflect.DeepEqual(actual[i], expected[i]) {
@@ -67,7 +67,7 @@ func verifyArgs(t *testing.T, actual []interface{}, expected ...interface{}) {
 }
 
 func TestPgxQueryRow(t *testing.T) {
-	c := newMockPgx()
+	c := newMockPgx(nil, nil)
 	d := &pgxBackend{db: c}
 
 	d.QueryRow("query", "arg1", "arg2")
@@ -79,7 +79,7 @@ func TestPgxQueryRow(t *testing.T) {
 }
 
 func TestPgxCopyFrom(t *testing.T) {
-	c := newMockPgx()
+	c := newMockPgx(nil, nil)
 	d := &pgxBackend{db: c}
 
 	d.CopyFrom(nil, nil, nil)
@@ -90,7 +90,7 @@ func TestPgxCopyFrom(t *testing.T) {
 }
 
 func TestPgxExec(t *testing.T) {
-	c := newMockPgx()
+	c := newMockPgx(nil, nil)
 	d := &pgxBackend{db: c}
 
 	d.Exec("query", "arg1", "arg2")
@@ -102,22 +102,31 @@ func TestPgxExec(t *testing.T) {
 }
 
 func TestPgxQueryValues(t *testing.T) {
-	c := newMockPgx()
+	c := newMockPgx(nil, &SimpleData{IntVal: 1, StringVal: "hello"})
 	d := &pgxBackend{db: c}
 
-	d.QueryValues(onedb.NewQuery("query", "arg1", "arg2"))
+	var intVal int
+	var stringVal string
+	q := onedb.NewQuery("query", "arg1", "arg2")
+	d.QueryValues(q, &intVal, &stringVal)
 	queries := c.MethodsCalled["QueryRow"]
 	if len(c.MethodsCalled) != 1 || len(queries) != 1 {
 		t.Fatal("expected QueryRow method to be called on backend")
 	}
-	verifyArgs(t, queries[0], "query", "arg1", "arg2")
+	if intVal != 1 || stringVal != "hello" {
+		t.Error("expected values to be set", intVal, stringVal)
+	}
+	verifyArgs(t, queries[0], "query", []interface{}{"arg1", "arg2"})
 }
 
 func TestPgxQueryJSON(t *testing.T) {
-	c := newMockPgx()
+	c := newMockPgx([]SimpleData{{IntVal: 1, StringVal: "hello"}}, nil)
 	d := &pgxBackend{db: c}
 
-	d.QueryJSON("query", "arg1", "arg2")
+	json, err := d.QueryJSON("query", "arg1", "arg2")
+	if err != nil || json != `[{"IntVal":1,"StringVal":"hello"}]` {
+		t.Error("expected valid results", json, err)
+	}
 	queries := c.MethodsCalled["Query"]
 	if len(c.MethodsCalled) != 1 || len(queries) != 1 {
 		t.Fatal("expected Query method to be called on backend")
@@ -126,15 +135,50 @@ func TestPgxQueryJSON(t *testing.T) {
 }
 
 func TestPgxQueryJSONRow(t *testing.T) {
+	c := newMockPgx([]SimpleData{{IntVal: 1, StringVal: "hello"}}, nil)
+	d := &pgxBackend{db: c}
 
+	json, err := d.QueryJSONRow("query", "arg1", "arg2")
+	if err != nil || json != `{"IntVal":1,"StringVal":"hello"}` {
+		t.Error("expected valid results", json, err)
+	}
+	queries := c.MethodsCalled["Query"]
+	if len(c.MethodsCalled) != 1 || len(queries) != 1 {
+		t.Fatal("expected Query method to be called on backend")
+	}
+	verifyArgs(t, queries[0], "query", "arg1", "arg2")
 }
 
 func TestPgxQueryStruct(t *testing.T) {
+	c := newMockPgx([]SimpleData{{IntVal: 1, StringVal: "hello"}}, nil)
+	d := &pgxBackend{db: c}
 
+	r := []SimpleData{}
+	err := d.QueryStruct(&r, "query", "arg1", "arg2")
+	if err != nil || len(r) != 1 || r[0].IntVal != 1 || r[0].StringVal != "hello" {
+		t.Error("expected valid results", err)
+	}
+	queries := c.MethodsCalled["Query"]
+	if len(c.MethodsCalled) != 1 || len(queries) != 1 {
+		t.Fatal("expected Query method to be called on backend")
+	}
+	verifyArgs(t, queries[0], "query", "arg1", "arg2")
 }
 
 func TestPgxQueryStructRow(t *testing.T) {
+	c := newMockPgx([]SimpleData{{IntVal: 1, StringVal: "hello"}}, nil)
+	d := &pgxBackend{db: c}
 
+	r := SimpleData{}
+	err := d.QueryStructRow(&r, "query", "arg1", "arg2")
+	if err != nil || r.IntVal != 1 || r.StringVal != "hello" {
+		t.Error("expected valid results", err)
+	}
+	queries := c.MethodsCalled["Query"]
+	if len(c.MethodsCalled) != 1 || len(queries) != 1 {
+		t.Fatal("expected Query method to be called on backend")
+	}
+	verifyArgs(t, queries[0], "query", "arg1", "arg2")
 }
 
 func TestPgxRowsColumns(t *testing.T) {
@@ -212,8 +256,15 @@ type mockPgx struct {
 	QueryRowReturn onedb.Scanner
 }
 
-func newMockPgx() *mockPgx {
-	return &mockPgx{MethodsCalled: make(map[string][][]interface{})}
+func newMockPgx(rows interface{}, row interface{}) *mockPgx {
+	pgx := &mockPgx{MethodsCalled: make(map[string][][]interface{})}
+	if rows != nil {
+		pgx.QueryReturn = onedb.NewRowsScanner(rows)
+	}
+	if row != nil {
+		pgx.QueryRowReturn = onedb.NewScanner(row)
+	}
+	return pgx
 }
 
 func (c *mockPgx) Close() {
@@ -236,26 +287,6 @@ func (c *mockPgx) QueryRow(query string, args ...interface{}) onedb.Scanner {
 func (c *mockPgx) CopyFrom(tableName Identifier, columnNames []string, rows CopyFromSource) (int, error) {
 	c.MethodsCalled["CopyFrom"] = append(c.MethodsCalled["CopyFrom"], []interface{}{tableName, columnNames, rows})
 	return 0, nil
-}
-
-func (c *mockPgx) QueryJSON(query string, args ...interface{}) (string, error) {
-	c.MethodsCalled["QueryJSON"] = append(c.MethodsCalled["QueryJSON"], append([]interface{}{query}, args...))
-	return "", nil
-}
-
-func (c *mockPgx) QueryJSONRow(query string, args ...interface{}) (string, error) {
-	c.MethodsCalled["CopyFrom"] = append(c.MethodsCalled["CopyFrom"], append([]interface{}{query}, args...))
-	return "", nil
-}
-
-func (c *mockPgx) QueryStruct(result interface{}, query string, args ...interface{}) error {
-	c.MethodsCalled["CopyFrom"] = append(c.MethodsCalled["CopyFrom"], append([]interface{}{result, query}, args...))
-	return nil
-}
-
-func (c *mockPgx) QueryStructRow(result interface{}, query string, args ...interface{}) error {
-	c.MethodsCalled["CopyFrom"] = append(c.MethodsCalled["CopyFrom"], append([]interface{}{result, query}, args...))
-	return nil
 }
 
 type mockPgxRows struct {
@@ -301,4 +332,9 @@ func (r *mockPgxRows) Values() ([]interface{}, error) {
 func (r *mockPgxRows) Scan(result ...interface{}) error {
 	r.MethodsCalled["Scan"] = append(r.MethodsCalled["Scan"], nil)
 	return r.ScanErr
+}
+
+type SimpleData struct {
+	IntVal    int
+	StringVal string
 }

@@ -8,8 +8,8 @@ import (
 func TestMockDBQueryJson(t *testing.T) {
 	d := NewMock(nil, nil, "hello", []SimpleData{SimpleData{1, "hello"}})
 	json, err := d.QueryJSON("select query")
-	if json != "hello" {
-		t.Error("expected to get back hello", json, err)
+	if err == nil {
+		t.Error("expected error due to invalid argument", err)
 	}
 
 	json, err = d.QueryJSON("select query2")
@@ -24,8 +24,8 @@ func TestMockDBQueryJson(t *testing.T) {
 }
 
 func TestMockDBQueryJsonRow(t *testing.T) {
-	d := NewMock(nil, nil, SimpleData{1, "hello"})
-	json, err := d.QueryJSON("select query2")
+	d := NewMock(nil, nil, []SimpleData{{1, "hello"}})
+	json, err := d.QueryJSONRow("select query2")
 	if json != `{"IntVal":1,"StringVal":"hello"}` {
 		t.Error("expected formatted json back", json, err)
 	}
@@ -52,6 +52,7 @@ func TestMockDBQueryStruct(t *testing.T) {
 		t.Error("expected 2 valid rows of data", result, err)
 	}
 
+	result = []SimpleData{}
 	err = d.QueryStruct(&result, "select query")
 	if err != nil || len(result) != 1 || result[0].IntVal != 3 || result[0].StringVal != "test" {
 		t.Error("expected 2 valid row of data", result, err)
@@ -71,8 +72,8 @@ func TestMockDBQueryStructRow(t *testing.T) {
 		t.Error("expected error for wrong result type")
 	}
 
-	q1 := SimpleData{1, "hello"}
-	q2 := SimpleData{2, "world"}
+	q1 := []SimpleData{{1, "hello"}}
+	q2 := []SimpleData{{2, "world"}}
 	d = NewMock(nil, nil, q1, q2)
 	err = d.QueryStructRow(&result, "select query")
 	if err != nil || result.IntVal != 1 || result.StringVal != "hello" {
@@ -87,13 +88,6 @@ func TestMockDBQueryStructRow(t *testing.T) {
 	err = d.QueryStructRow(&result, "select query")
 	if err == nil {
 		t.Error("expected error after using all the results", result, err)
-	}
-}
-
-func TestSetDest(t *testing.T) {
-	err := setDest("hello", &SimpleData{1, "test"})
-	if err == nil {
-		t.Error("expected error due to non-matching types")
 	}
 }
 

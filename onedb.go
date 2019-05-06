@@ -25,7 +25,7 @@ func QueryJSON(backend Backender, query string, args ...interface{}) (string, er
 	}
 	defer rows.Close()
 
-	return GetJSON(rows)
+	return getJSON(rows)
 }
 
 // QueryJSONRow runs a query against the provided Backender and returns the JSON result
@@ -36,7 +36,7 @@ func QueryJSONRow(backend Backender, query string, args ...interface{}) (string,
 	}
 	defer rows.Close()
 
-	return GetJSONRow(rows)
+	return getJSONRow(rows)
 }
 
 // QueryStruct runs a query against the provided Backender and populates the provided result
@@ -46,13 +46,13 @@ func QueryStruct(backend Backender, result interface{}, query string, args ...in
 		return errors.New("Invalid result argument.  Must be a pointer to a slice")
 	}
 
-	rows, err := backend.Query(query)
+	rows, err := backend.Query(query, args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
-	return GetStruct(rows, result)
+	return getStruct(rows, result)
 }
 
 // QueryStructRow runs a query against the provided Backender and populates the provided result
@@ -61,19 +61,21 @@ func QueryStructRow(backend Backender, result interface{}, query string, args ..
 		return errors.New("Invalid result argument.  Must be a pointer to a struct")
 	}
 
-	rows, err := backend.Query(query)
+	rows, err := backend.Query(query, args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
-	return GetStructRow(rows, result)
+	return getStructRow(rows, result)
 }
 
+// IsPointer is used to determine if a reflect.Type is a pointer
 func IsPointer(item reflect.Type) bool {
 	return item.Kind() == reflect.Ptr
 }
 
+// IsSlice is used to determine if a reflect.Type is a slice
 func IsSlice(item reflect.Type) bool {
 	return item.Kind() == reflect.Slice
 }
