@@ -66,7 +66,7 @@ func TestSqllibExecute(t *testing.T) {
 	c := newMockSqllibBackend()
 	d := &sqllibBackend{db: c}
 
-	d.Execute("query", "arg1", "arg2")
+	d.Exec("query", "arg1", "arg2")
 	if len(c.MethodsRun) != 1 || c.MethodsRun[0].MethodName != "Exec" {
 		t.Fatal("expected Exec method to be called on backend")
 	}

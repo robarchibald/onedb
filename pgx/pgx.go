@@ -56,48 +56,21 @@ func (b *pgxBackend) CopyFrom(tableName Identifier, columnNames []string, rowSrc
 }
 
 func (b *pgxBackend) QueryValues(query *onedb.Query, result ...interface{}) error {
-	if query == nil {
-		return onedb.ErrQueryIsNil
-	}
 	return onedb.QueryValues(b, query, result...)
 }
 
 func (b *pgxBackend) QueryJSON(query string, args ...interface{}) (string, error) {
-	rows, err := b.Query(query, args...)
-	if err != nil {
-		return "", err
-	}
-	defer rows.Close()
-
-	return onedb.GetJSON(rows)
+	return onedb.QueryJSON(b, query, args...)
 }
 
 func (b *pgxBackend) QueryJSONRow(query string, args ...interface{}) (string, error) {
-	rows, err := b.Query(query, args...)
-	if err != nil {
-		return "", err
-	}
-	defer rows.Close()
-
-	return onedb.GetJSONRow(rows)
+	return onedb.QueryJSONRow(b, query, args...)
 }
 
 func (b *pgxBackend) QueryStruct(result interface{}, query string, args ...interface{}) error {
-	rows, err := b.Query(query, args...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	return onedb.GetStruct(rows, result)
+	return onedb.QueryStruct(b, result, query, args...)
 }
 
 func (b *pgxBackend) QueryStructRow(result interface{}, query string, args ...interface{}) error {
-	rows, err := b.Query(query, args...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	return onedb.GetStructRow(rows, result)
+	return onedb.QueryStructRow(b, result, query, args...)
 }
