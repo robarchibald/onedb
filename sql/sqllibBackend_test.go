@@ -54,10 +54,6 @@ func TestSqllibClose(t *testing.T) {
 func TestSqllibQuery(t *testing.T) {
 	c := newMockSqllibBackend()
 	d := &sqllibBackend{db: c}
-	_, err := d.Query("bogus")
-	if err == nil {
-		t.Error("expected error")
-	}
 
 	d.Query("query", "arg1", "arg2")
 	if len(c.MethodsRun) != 1 || c.MethodsRun[0].MethodName != "Query" {
@@ -69,10 +65,6 @@ func TestSqllibQuery(t *testing.T) {
 func TestSqllibExecute(t *testing.T) {
 	c := newMockSqllibBackend()
 	d := &sqllibBackend{db: c}
-	err := d.Execute("bogus")
-	if err == nil {
-		t.Error("expected error")
-	}
 
 	d.Execute("query", "arg1", "arg2")
 	if len(c.MethodsRun) != 1 || c.MethodsRun[0].MethodName != "Exec" {
@@ -120,7 +112,7 @@ func (c *mockSqllibBackend) Exec(query string, args ...interface{}) (sqllib.Resu
 	return nil, nil
 }
 func (c *mockSqllibBackend) Query(query string, args ...interface{}) (*sqllib.Rows, error) {
-	c.SaveMethodCall("QueryRow", append([]interface{}{query}, args...))
+	c.SaveMethodCall("Query", append([]interface{}{query}, args...))
 	return nil, nil
 }
 func (c *mockSqllibBackend) QueryRow(query string, args ...interface{}) *sqllib.Row {
