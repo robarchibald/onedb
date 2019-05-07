@@ -65,8 +65,8 @@ type redisBackend struct {
 	pool pooler
 }
 
-// NewRedis is the constructor for a Redis connection
-func NewRedis(server string, port int, password string, maxIdle, maxConnections int) Rediser {
+// New is the constructor for a Redis connection
+func New(server string, port int, password string, maxIdle, maxConnections int) Rediser {
 	return &redisBackend{newConnPool(server, port, password, maxIdle, maxConnections)}
 }
 
