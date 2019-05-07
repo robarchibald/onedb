@@ -20,16 +20,18 @@ type MethodsRun struct {
 	Arguments  []interface{}
 }
 
-// MockDBer is a fake database that can be used in place of a pgx or sql lib database for testing
-type MockDBer interface {
+// Mocker is a fake database that can be used in place of a pgx or sql lib database for testing
+type Mocker interface {
 	DBer
+	Query(query string, args ...interface{}) (RowsScanner, error)
+	QueryRow(query string, args ...interface{}) Scanner
 	QueriesRun() []MethodsRun
 	SaveMethodCall(name string, arguments []interface{})
 	VerifyNextCommand(t *testing.T, name string, expected ...interface{})
 }
 
-// NewMock will create an instance that implements the MockDBer interface
-func NewMock(closeErr, execErr error, data ...interface{}) MockDBer {
+// NewMock will create an instance that implements the Mocker interface
+func NewMock(closeErr, execErr error, data ...interface{}) Mocker {
 	queries := []MethodsRun{}
 	return &mockDb{data, queries, closeErr, execErr}
 }

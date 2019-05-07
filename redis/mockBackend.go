@@ -9,7 +9,7 @@ import (
 )
 
 type redisMock struct {
-	db       onedb.MockDBer
+	db       onedb.Mocker
 	DoResult interface{}
 	DoErr    error
 	DelErr   error
