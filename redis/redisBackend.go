@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/EndFirstCorp/onedb"
@@ -14,15 +13,11 @@ import (
 var errInvalidRedisQueryType = errors.New("Invalid query. Must be of type *RedisCommand")
 var errInvalidRedisExecType = errors.New("Invalid execute request. Must be of type *RedisCommand")
 
-var redisCreate redisCreator = &redisRealCreator{}
+type newConnPoolFunc func(string, int, string, int, int) pooler
 
-type redisCreator interface {
-	newConnPool(server string, port int, password string, maxIdle, maxConnections int) redisBackender
-}
+var redisCreate newConnPoolFunc = newConnPool
 
-type redisRealCreator struct{}
-
-func (c *redisRealCreator) newConnPool(server string, port int, password string, maxIdle, maxConnections int) redisBackender {
+func newConnPool(server string, port int, password string, maxIdle, maxConnections int) pooler {
 	const timeout = 2 * time.Second
 	return &redis.Pool{
 		MaxIdle:   maxIdle,
@@ -51,46 +46,58 @@ func (c *redisRealCreator) newConnPool(server string, port int, password string,
 	}
 }
 
-type RedisCommand struct {
-	Command string
-	Args    []interface{}
+// Rediser is the public interface for querying Redis
+type Rediser interface {
+	Close() error
+	Del(key string) error
+	Do(command string, args ...interface{}) (interface{}, error)
+	Get(key string) (string, error)
+	GetStruct(key string, result interface{}) error
+	SetWithExpire(key string, value interface{}, expireSeconds int) error
 }
 
-type redisBackender interface {
+type pooler interface {
 	Close() error
 	Get() redis.Conn
 }
 
 type redisBackend struct {
-	pool redisBackender
+	pool pooler
 }
 
-func NewRedis(server string, port int, password string, maxIdle, maxConnections int) onedb.DBer {
-	return &redisBackend{redisCreate.newConnPool(server, port, password, maxIdle, maxConnections)}
-}
-
-func NewRedisGetCommand(key string) *RedisCommand {
-	return &RedisCommand{Command: "GET", Args: []interface{}{key}}
-}
-
-func NewRedisDelCommand(key string) *RedisCommand {
-	return &RedisCommand{Command: "DEL", Args: []interface{}{key}}
-}
-
-func NewRedisSetCommand(key string, value interface{}, expireSeconds int) (*RedisCommand, error) {
-	data, err := json.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-	return &RedisCommand{Command: "SETEX", Args: []interface{}{key, strconv.Itoa(expireSeconds), string(data)}}, nil
-}
-
-func (r *redisBackend) Backend() interface{} {
-	return r.pool
+// NewRedis is the constructor for a Redis connection
+func NewRedis(server string, port int, password string, maxIdle, maxConnections int) Rediser {
+	return &redisBackend{newConnPool(server, port, password, maxIdle, maxConnections)}
 }
 
 func (r *redisBackend) Close() error {
 	return r.pool.Close()
+}
+
+func (r *redisBackend) Get(key string) (string, error) {
+	return redis.String(r.Do("GET", key))
+}
+
+func (r *redisBackend) GetStruct(key string, result interface{}) error {
+	data, err := redis.Bytes(r.Do("GET", key))
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, result)
+}
+
+func (r *redisBackend) SetWithExpire(key string, value interface{}, expireSeconds int) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	_, err = r.Do("SETEX", key, expireSeconds, string(data))
+	return err
+}
+
+func (r *redisBackend) Del(key string) error {
+	_, err := r.Do("DEL", key)
+	return err
 }
 
 func (r *redisBackend) Do(command string, args ...interface{}) (interface{}, error) {
@@ -98,28 +105,4 @@ func (r *redisBackend) Do(command string, args ...interface{}) (interface{}, err
 	defer c.Close()
 
 	return c.Do(command, args...)
-}
-
-func (r *redisBackend) QueryValues(query *onedb.Query, result ...interface{}) error {
-	return nil
-}
-
-func (r *redisBackend) QueryJSON(command string, args ...interface{}) (string, error) {
-	return redis.String(r.Do(command, args...))
-}
-
-func (r *redisBackend) QueryJSONRow(command string, args ...interface{}) (string, error) {
-	return r.QueryJSON(command, args...)
-}
-
-func (r *redisBackend) QueryStruct(result interface{}, command string, args ...interface{}) error {
-	data, err := redis.Bytes(r.Do(command, args...))
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, result)
-}
-
-func (r *redisBackend) QueryStructRow(result interface{}, command string, args ...interface{}) error {
-	return r.QueryStruct(result, command, args...)
 }
