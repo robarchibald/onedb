@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"testing"
 )
 
 type mockDb struct {
@@ -23,6 +24,8 @@ type MethodsRun struct {
 type MockDBer interface {
 	DBer
 	QueriesRun() []MethodsRun
+	SaveMethodCall(name string, arguments []interface{})
+	VerifyNextCommand(t *testing.T, name string, expected ...interface{})
 }
 
 // NewMock will create an instance that implements the MockDBer interface
@@ -93,6 +96,31 @@ func (r *mockDb) nextScanner() (RowsScanner, error) {
 	data := r.data[0]
 	r.data = r.data[1:]
 	return NewRowsScanner(data), nil
+}
+
+func (r *mockDb) VerifyNextCommand(t *testing.T, name string, expected ...interface{}) {
+	if len(r.methodsRun) == 0 {
+		t.Error("No methods found to have been run")
+		return
+	}
+	current := r.methodsRun[0]
+	r.methodsRun = r.methodsRun[1:]
+	if current.MethodName != name {
+		t.Errorf("Method %s not found. Actual method was %s", name, current.MethodName)
+		return
+	}
+	verifyArgs(t, current.Arguments, expected...)
+}
+
+func verifyArgs(t *testing.T, actual []interface{}, expected ...interface{}) {
+	if len(expected) != len(actual) {
+		t.Fatal("Number of arguments don't match. Expected:", len(expected), "actual:", len(actual))
+	}
+	for i := range actual {
+		if !reflect.DeepEqual(actual[i], expected[i]) {
+			t.Errorf("Argument mismatch at %d. Expected:%v, Actual:%v\n", i, expected[i], actual[i])
+		}
+	}
 }
 
 type mockRowsScanner struct {
