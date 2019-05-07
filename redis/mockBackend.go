@@ -1,6 +1,8 @@
 package redis
 
 import (
+	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/EndFirstCorp/onedb"
@@ -25,7 +27,7 @@ type Mocker interface {
 
 // NewMock is the constructor for a fake Redis connection
 func NewMock(delErr, saveErr error, doResult interface{}, doErr error) Mocker {
-	return &redisMock{db: onedb.NewMock(nil, nil)}
+	return &redisMock{db: onedb.NewMock(nil, nil, doResult)}
 }
 
 func (r *redisMock) Close() error {
@@ -38,7 +40,16 @@ func (r *redisMock) Get(key string) (string, error) {
 }
 
 func (r *redisMock) GetStruct(key string, result interface{}) error {
-	return r.db.QueryStruct(result, key)
+	resultType := reflect.TypeOf(result)
+	if !onedb.IsPointer(resultType) {
+		return errors.New("invalid result type")
+	}
+	if onedb.IsSlice(resultType.Elem()) {
+		return r.db.QueryStruct(result, key)
+	} else if onedb.IsStruct(resultType.Elem()) {
+		return r.db.QueryStructRow(result, key)
+	}
+	return errors.New("invalid result type")
 }
 
 func (r *redisMock) SetWithExpire(key string, value interface{}, expireSeconds int) error {
@@ -63,5 +74,5 @@ func (r *redisMock) SaveMethodCall(name string, arguments []interface{}) {
 	r.db.SaveMethodCall(name, arguments)
 }
 func (r *redisMock) VerifyNextCommand(t *testing.T, name string, expected ...interface{}) {
-	r.VerifyNextCommand(t, name, expected...)
+	r.db.VerifyNextCommand(t, name, expected...)
 }

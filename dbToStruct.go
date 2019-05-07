@@ -28,6 +28,9 @@ func getStruct(rows RowsScanner, result interface{}) error {
 }
 
 func getStructRow(rows RowsScanner, result interface{}) error {
+	if rows.Err() != nil {
+		return rows.Err()
+	}
 	if !rows.Next() {
 		return errors.New("Empty result set")
 	}

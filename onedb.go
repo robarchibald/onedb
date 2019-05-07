@@ -80,6 +80,11 @@ func IsSlice(item reflect.Type) bool {
 	return item.Kind() == reflect.Slice
 }
 
+// IsStruct is used to determine if a reflect.Type is a struct
+func IsStruct(item reflect.Type) bool {
+	return item.Kind() == reflect.Struct
+}
+
 // Query is a generic struct that houses a query string and arguments used to construct a query
 type Query struct {
 	Query string
