@@ -59,94 +59,100 @@ func scanStruct(s Scanner, vals []interface{}, dbToStruct map[int]structFieldInf
 	return nil
 }
 
+var timeKind = reflect.TypeOf(time.Time{}).Kind()
+var nilType = reflect.TypeOf(nil)
+var nilValue = reflect.ValueOf(nil)
+
 // I have some values coming from the database that are nullable, and hence pointers to: bool, int16, string and time
 // Unfortunately, I haven't figured out a better way to make it work than the lame if statement. Hopefully can replace
 // with something better whenever I run across more nullable values to set.
-func setValue(field reflect.Value, pval *interface{}) {
-	if !field.CanSet() {
+func setValue(dest reflect.Value, src *interface{}) {
+	if !dest.CanSet() {
 		return
 	}
-	fieldType := field.Type()
-	dbType := reflect.TypeOf(*pval)
-	if dbType != reflect.TypeOf(nil) && (fieldType != dbType && fieldType.Kind() != reflect.Ptr || fieldType.Kind() == reflect.Ptr && fieldType.Elem() != dbType) {
-		return
-	}
+	dest = getRootValue(dest)
+	destType := dest.Type()
+	destKind := destType.Kind()
 
-	switch v := (*pval).(type) {
+	switch v := (*src).(type) {
 	case nil:
 	case bool:
-		if field.Kind() == reflect.Ptr {
-			field.Set(reflect.ValueOf(&v))
-		} else {
-			field.SetBool(v)
+		if destKind == reflect.Bool {
+			dest.SetBool(v)
 		}
 	case []byte:
-		field.SetBytes(v)
+		if destKind == reflect.Slice && destType.Elem().Kind() == reflect.Uint8 {
+			dest.SetBytes(v)
+		}
 	case float32:
-		if field.Kind() == reflect.Ptr {
-			field.Set(reflect.ValueOf(&v))
-		} else {
-			field.SetFloat(float64(v))
+		if destKind == reflect.Float32 || destKind == reflect.Float64 {
+			dest.SetFloat(float64(v))
 		}
 	case float64:
-		if field.Kind() == reflect.Ptr {
-			field.Set(reflect.ValueOf(&v))
-		} else {
-			field.SetFloat(v)
-		}
-	case int:
-		if field.Kind() == reflect.Ptr {
-			field.Set(reflect.ValueOf(&v))
-		} else {
-			field.SetInt(int64(v))
+		if destKind == reflect.Float64 {
+			dest.SetFloat(v)
 		}
 	case int8:
-		if field.Kind() == reflect.Ptr {
-			field.Set(reflect.ValueOf(&v))
-		} else {
-			field.SetInt(int64(v))
+		if destKind == reflect.Int8 || destKind == reflect.Int16 || destKind == reflect.Int32 || destKind == reflect.Int64 || destKind == reflect.Int {
+			dest.SetInt(int64(v))
 		}
 	case int16:
-		if field.Kind() == reflect.Ptr {
-			field.Set(reflect.ValueOf(&v))
-		} else {
-			field.SetInt(int64(v))
+		if destKind == reflect.Int16 || destKind == reflect.Int32 || destKind == reflect.Int64 || destKind == reflect.Int {
+			dest.SetInt(int64(v))
 		}
 	case int32:
-		if field.Kind() == reflect.Ptr {
-			field.Set(reflect.ValueOf(&v))
-		} else {
-			field.SetInt(int64(v))
+		if destKind == reflect.Int32 || destKind == reflect.Int64 || destKind == reflect.Int {
+			dest.SetInt(int64(v))
 		}
 	case int64:
-		if field.Kind() == reflect.Ptr {
-			field.Set(reflect.ValueOf(&v))
-		} else {
-			field.SetInt(v)
+		if destKind == reflect.Int64 || destKind == reflect.Int {
+			dest.SetInt(v)
+		}
+	case int:
+		if destKind == reflect.Int || destKind == reflect.Int64 {
+			dest.SetInt(int64(v))
 		}
 	case uint8:
-		field.SetUint(uint64(v))
+		if destKind == reflect.Uint8 || destKind == reflect.Uint16 || destKind == reflect.Uint32 || destKind == reflect.Uint64 || destKind == reflect.Uint {
+			dest.SetUint(uint64(v))
+		}
 	case uint16:
-		field.SetUint(uint64(v))
+		if destKind == reflect.Uint16 || destKind == reflect.Uint32 || destKind == reflect.Uint64 || destKind == reflect.Uint {
+			dest.SetUint(uint64(v))
+		}
 	case uint32:
-		field.SetUint(uint64(v))
+		if destKind == reflect.Uint32 || destKind == reflect.Uint64 || destKind == reflect.Uint {
+			dest.SetUint(uint64(v))
+		}
 	case uint64:
-		field.SetUint(v)
+		if destKind == reflect.Uint64 || destKind == reflect.Uint {
+			dest.SetUint(v)
+		}
+	case uint:
+		if destKind == reflect.Uint64 || destKind == reflect.Uint {
+			dest.SetUint(uint64(v))
+		}
 	case string:
-		if field.Kind() == reflect.Ptr {
-			field.Set(reflect.ValueOf(&v))
-		} else {
-			field.SetString(v)
+		if destType.Kind() == reflect.String {
+			dest.SetString(v)
 		}
 	case time.Time:
-		if field.Kind() == reflect.Ptr {
-			field.Set(reflect.ValueOf(&v))
-		} else {
-			field.Set(reflect.ValueOf(v))
+		if destType.Kind() == timeKind {
+			dest.Set(reflect.ValueOf(v))
 		}
 	default:
-		field.Set(reflect.ValueOf(v))
+		dest.Set(reflect.ValueOf(v))
 	}
+}
+
+func getRootValue(value reflect.Value) reflect.Value {
+	if value.Kind() == reflect.Ptr {
+		child := value.Elem()
+		if child != nilValue {
+			return getRootValue(child)
+		}
+	}
+	return value
 }
 
 type structFieldInfo struct {
