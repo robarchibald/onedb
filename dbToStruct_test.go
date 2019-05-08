@@ -115,11 +115,16 @@ func TestStructRow(t *testing.T) {
 }
 
 func TestSetValue(t *testing.T) {
+	v := "hello"
+	i := 0
 	setValueRunner("BoolVal", true, t)
 	setValueRunner("ByteVal", []byte("byte"), t)
 	setValueRunner("Float32", float32(123.4567899), t)
 	setValueRunner("Float64", float64(123.4567899), t)
 	setValueRunner("Int", int(123), t)
+	setValueExpectEmpty("Int", &i, t) // don't allow setting nullable value to non nullable destination
+	setValueRunner("Int", int8(123), t)
+	setValueExpectEmpty("Int", "hello", t)
 	setValueRunner("Int8", int8(123), t)
 	setValueRunner("Int16", int16(123), t)
 	setValueRunner("Int32", int32(123), t)
@@ -132,7 +137,10 @@ func TestSetValue(t *testing.T) {
 	setValueRunner("Time", time.Date(2000, 01, 01, 12, 0, 0, 0, time.Local), t)
 	setValueRunner("StrSlice", []string{"hello", "there"}, t)
 	setValueRunner("StrPtr", "hello", t)
+	setValueRunner("StrPtr", &v, t)
+	setValueExpectEmpty("StrPtr", &i, t)
 	setValueRunner("Int16Ptr", int16(123), t)
+	setValueExpectEmpty("Int16Ptr", "hello", t)
 	setValueRunner("BoolPtr", true, t)
 	setValueRunner("TimePtr", time.Date(2000, 01, 01, 12, 0, 0, 0, time.Local), t)
 }
@@ -158,23 +166,47 @@ func TestSetValueEdgeCases(t *testing.T) {
 
 func setValueRunner(fieldName string, value interface{}, t *testing.T) {
 	test := &TestStruct{}
-	field := reflect.ValueOf(test).Elem().FieldByName(fieldName)
+	dest := reflect.ValueOf(test).Elem().FieldByName(fieldName)
 	iface := new(interface{})
 	*iface = value
-	setValue(field, iface)
-	if field.Kind() == reflect.Slice {
+	setValue(dest, iface)
+	if dest.Kind() == reflect.Slice {
 		v := fmt.Sprintf("%v", value)
-		if fv := fmt.Sprintf("%v", field.Interface()); fv != v {
+		if fv := fmt.Sprintf("%v", dest.Interface()); fv != v {
 			t.Error("expected slices to match", fv, v)
 		}
-	} else if field.Kind() == reflect.Ptr {
-		if field.Elem().Interface() != value {
-			t.Errorf("expected %s to be set to %v. Actual: %s", fieldName, value, field.Elem().Interface())
+	} else if dest.Kind() == reflect.Ptr {
+		v := reflect.ValueOf(value)
+		if v.Kind() == reflect.Ptr {
+			if dest.Elem() == reflect.ValueOf(nil) {
+				t.Errorf("expected %s to be set to %v. Actual: nil", fieldName, v.Elem().Interface())
+			} else if dest.Elem().Interface() != v.Elem().Interface() {
+				t.Errorf("expected %s to be set to %v. Actual: %s", fieldName, v.Elem().Interface(), dest.Elem().Interface())
+			}
+		} else {
+			if dest.Elem() == reflect.ValueOf(nil) {
+				t.Errorf("expected %s to be set to %v. Actual: nil", fieldName, value)
+			} else if dest.Elem().Interface() != value {
+				t.Errorf("expected %s to be set to %v. Actual: %s", fieldName, value, dest.Elem().Interface())
+			}
 		}
 	} else {
-		if field.Interface() != value {
-			t.Errorf("expected %s to be set to %v. Actual: %s", fieldName, value, field.Interface())
+		if fmt.Sprintf("%v", dest.Interface()) != fmt.Sprintf("%v", value) {
+			t.Errorf("expected %s to be set to %v. Actual: %v", fieldName, value, dest.Interface())
 		}
+	}
+}
+
+func setValueExpectEmpty(fieldName string, value interface{}, t *testing.T) {
+	test := &TestStruct{}
+	dest := reflect.ValueOf(test).Elem().FieldByName(fieldName)
+	iface := new(interface{})
+	*iface = value
+	setValue(dest, iface)
+
+	zeroValue := reflect.New(dest.Type()).Elem().Interface()
+	if dest.Interface() != zeroValue {
+		t.Errorf("expected %s to be empty. Expected: %v, Actual: %v", fieldName, zeroValue, dest.Interface())
 	}
 }
 
