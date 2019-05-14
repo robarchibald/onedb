@@ -175,7 +175,14 @@ func (r *pgxRows) FieldDescriptions() []FieldDescription {
 // rows were found it returns ErrNoRows. If multiple rows are returned it
 // ignores all but the first.
 func (r *pgxRows) Scan(dest ...interface{}) error {
-	return r.rows.Scan()
+	vals, err := r.rows.Values()
+	if err != nil {
+		return err
+	}
+	for i, item := range dest {
+		*(item.(*interface{})) = vals[i]
+	}
+	return nil
 }
 
 func (r *pgxRows) Values() ([]interface{}, error) {
