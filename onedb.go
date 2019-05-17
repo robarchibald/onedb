@@ -13,7 +13,7 @@ func QueryValues(backend Backender, query *Query, result ...interface{}) error {
 	if query == nil {
 		return ErrQueryIsNil
 	}
-	row := backend.QueryRow(query.Query, query.Args)
+	row := backend.QueryRow(query.Query, query.Args...)
 	return row.Scan(result...)
 }
 
