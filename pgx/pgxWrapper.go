@@ -75,12 +75,12 @@ func (b *pgxWithReconnect) Query(query string, args ...interface{}) (onedb.RowsS
 	return &pgxRows{rows: rows}, rows.Err()
 }
 
-func (b *pgxWithReconnect) Execute(query string, args ...interface{}) error {
-	_, err := b.db.Exec(query, args...)
+func (b *pgxWithReconnect) Exec(query string, args ...interface{}) (CommandTag, error) {
+	tag, err := b.db.Exec(query, args...)
 	if (err == pgx.ErrDeadConn || err != nil && strings.HasSuffix(err.Error(), "connection reset by peer")) && b.reconnect() {
-		return b.Execute(query, args...)
+		return b.Exec(query, args...)
 	}
-	return err
+	return CommandTag(tag), err
 }
 
 func (b *pgxWithReconnect) ping() error {
