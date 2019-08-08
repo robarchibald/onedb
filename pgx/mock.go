@@ -1,6 +1,7 @@
 package pgx
 
 import (
+	"io"
 	"testing"
 
 	"github.com/EndFirstCorp/onedb"
@@ -55,6 +56,9 @@ func (b *mockBackend) QueryStruct(result interface{}, query string, args ...inte
 }
 func (b *mockBackend) QueryStructRow(result interface{}, query string, args ...interface{}) error {
 	return onedb.QueryStructRow(b, result, query, args...)
+}
+func (b *mockBackend) QueryWriteCSV(w io.Writer, options map[string]bool, query string, args ...interface{}) error {
+	return onedb.QueryWriteCSV(w, options, b, query, args...)
 }
 func (b *mockBackend) QueriesRun() []onedb.MethodsRun {
 	return b.db.QueriesRun()

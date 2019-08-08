@@ -2,6 +2,7 @@ package sql
 
 import (
 	sqllib "database/sql"
+	"io"
 
 	"github.com/EndFirstCorp/onedb"
 	_ "github.com/denisenkom/go-mssqldb"
@@ -82,4 +83,8 @@ func (b *sqllibBackend) QueryStruct(result interface{}, query string, args ...in
 
 func (b *sqllibBackend) QueryStructRow(result interface{}, query string, args ...interface{}) error {
 	return onedb.QueryStructRow(b, result, query, args...)
+}
+
+func (b *sqllibBackend) QueryWriteCSV(w io.Writer, options map[string]bool, query string, args ...interface{}) error {
+	return onedb.QueryWriteCSV(w, options, b, query, args...)
 }
