@@ -111,7 +111,7 @@ func getJSONValue(pval *interface{}) string {
 		}
 		return "false"
 	case []byte:
-		return encodeByteSlice(v)
+		return encodeByteSlice(v, true)
 	case time.Time:
 		return v.Format(`"2006-01-02 15:04:05.999"`)
 	case uint8, uint16, uint32, uint64, int, int8, int16, int32, int64, float32, float64, complex64, complex128:
@@ -128,13 +128,15 @@ func getJSONValue(pval *interface{}) string {
 // over the bytes.Buffer
 var hex = "0123456789abcdef"
 
-func encodeByteSlice(byteSlice []byte) string {
+func encodeByteSlice(byteSlice []byte, useQuotes bool) string {
 	if len(byteSlice) == 0 {
 		return "null"
 	}
 
 	e := &bytes.Buffer{}
-	e.WriteByte('"')
+	if useQuotes {
+		e.WriteByte('"')
+	}
 	if len(byteSlice) < 1024 {
 		// for small buffers, using Encode directly is much faster.
 		dst := make([]byte, base64.StdEncoding.EncodedLen(len(byteSlice)))
@@ -147,7 +149,9 @@ func encodeByteSlice(byteSlice []byte) string {
 		enc.Write(byteSlice)
 		enc.Close()
 	}
-	e.WriteByte('"')
+	if useQuotes {
+		e.WriteByte('"')
+	}
 	return string(e.Bytes())
 }
 
