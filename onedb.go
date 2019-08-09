@@ -87,7 +87,7 @@ func IsStruct(item reflect.Type) bool {
 }
 
 // QueryWriteCSV runs a query against the provided Backender and saves the response to the specified file in CSV format
-func QueryWriteCSV(w io.Writer, options map[string]bool, backend Backender, query string, args ...interface{}) error {
+func QueryWriteCSV(w io.Writer, options CSVOptions, backend Backender, query string, args ...interface{}) error {
 	rows, err := backend.Query(query, args...)
 	if err != nil {
 		return err

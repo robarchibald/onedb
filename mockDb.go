@@ -78,7 +78,7 @@ func (r *mockDb) QueryStructRow(result interface{}, query string, args ...interf
 	return QueryStructRow(r, result, query, args...)
 }
 
-func (r *mockDb) QueryWriteCSV(w io.Writer, options map[string]bool, query string, args ...interface{}) error {
+func (r *mockDb) QueryWriteCSV(w io.Writer, options CSVOptions, query string, args ...interface{}) error {
 	return QueryWriteCSV(w, options, r, query, args...)
 }
 

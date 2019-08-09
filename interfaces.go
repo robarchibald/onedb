@@ -33,7 +33,7 @@ type DBer interface {
 	QueryJSONRow(query string, args ...interface{}) (string, error)
 	QueryStruct(result interface{}, query string, args ...interface{}) error
 	QueryStructRow(result interface{}, query string, args ...interface{}) error
-	QueryWriteCSV(w io.Writer, options map[string]bool, query string, args ...interface{}) error
+	QueryWriteCSV(w io.Writer, options CSVOptions, query string, args ...interface{}) error
 }
 
 var ErrRowsScannerInvalidData = errors.New("data must be a slice of structs")

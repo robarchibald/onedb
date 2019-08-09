@@ -77,6 +77,6 @@ func (b *pgxBackend) QueryStructRow(result interface{}, query string, args ...in
 	return onedb.QueryStructRow(b, result, query, args...)
 }
 
-func (b *pgxBackend) QueryWriteCSV(w io.Writer, options map[string]bool, query string, args ...interface{}) error {
+func (b *pgxBackend) QueryWriteCSV(w io.Writer, options onedb.CSVOptions, query string, args ...interface{}) error {
 	return onedb.QueryWriteCSV(w, options, b, query, args...)
 }

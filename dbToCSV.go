@@ -7,7 +7,12 @@ import (
 	"time"
 )
 
-func writeCSV(rows RowsScanner, w io.Writer, options map[string]bool) error {
+// CSVOptions contains specifications for how text should be formatted in a CSV file
+type CSVOptions struct {
+	DateOnly bool
+}
+
+func writeCSV(rows RowsScanner, w io.Writer, options CSVOptions) error {
 	headers, vals, err := getColumnNamesAndValues(rows, false)
 	if err != nil {
 		return err
@@ -30,7 +35,7 @@ func writeCSV(rows RowsScanner, w io.Writer, options map[string]bool) error {
 	return csvWriter.Error()
 }
 
-func scanCSV(s Scanner, vals []interface{}, options map[string]bool) ([]string, error) {
+func scanCSV(s Scanner, vals []interface{}, options CSVOptions) ([]string, error) {
 	err := s.Scan(vals...)
 	if err != nil {
 		return nil, err
@@ -43,10 +48,7 @@ func scanCSV(s Scanner, vals []interface{}, options map[string]bool) ([]string, 
 	return row, nil
 }
 
-func getCSVValue(pval *interface{}, options map[string]bool) string {
-	if options == nil {
-		options = make(map[string]bool)
-	}
+func getCSVValue(pval *interface{}, options CSVOptions) string {
 	switch v := (*pval).(type) {
 	case nil:
 		return ""
@@ -55,11 +57,9 @@ func getCSVValue(pval *interface{}, options map[string]bool) string {
 			return "true"
 		}
 		return "false"
-	case []byte:
-		return encodeByteSlice(v, false)
 	case time.Time:
 		timeFormat := "2006-01-02 15:04:05.999"
-		if options["dateOnly"] {
+		if options.DateOnly {
 			timeFormat = "2006-01-02"
 		}
 		return v.Format(timeFormat)

@@ -85,6 +85,6 @@ func (b *sqllibBackend) QueryStructRow(result interface{}, query string, args ..
 	return onedb.QueryStructRow(b, result, query, args...)
 }
 
-func (b *sqllibBackend) QueryWriteCSV(w io.Writer, options map[string]bool, query string, args ...interface{}) error {
+func (b *sqllibBackend) QueryWriteCSV(w io.Writer, options onedb.CSVOptions, query string, args ...interface{}) error {
 	return onedb.QueryWriteCSV(w, options, b, query, args...)
 }
