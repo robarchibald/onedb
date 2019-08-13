@@ -3,6 +3,7 @@ package onedb
 import (
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"testing"
 )
@@ -75,6 +76,10 @@ func (r *mockDb) QueryStruct(result interface{}, query string, args ...interface
 
 func (r *mockDb) QueryStructRow(result interface{}, query string, args ...interface{}) error {
 	return QueryStructRow(r, result, query, args...)
+}
+
+func (r *mockDb) QueryWriteCSV(w io.Writer, options CSVOptions, query string, args ...interface{}) error {
+	return QueryWriteCSV(w, options, r, query, args...)
 }
 
 func (r *mockDb) Close() error {

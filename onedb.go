@@ -1,6 +1,7 @@
 package onedb
 
 import (
+	"io"
 	"net"
 	"reflect"
 	"time"
@@ -83,6 +84,17 @@ func IsSlice(item reflect.Type) bool {
 // IsStruct is used to determine if a reflect.Type is a struct
 func IsStruct(item reflect.Type) bool {
 	return item.Kind() == reflect.Struct
+}
+
+// QueryWriteCSV runs a query against the provided Backender and saves the response to the specified file in CSV format
+func QueryWriteCSV(w io.Writer, options CSVOptions, backend Backender, query string, args ...interface{}) error {
+	rows, err := backend.Query(query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	return writeCSV(rows, w, options)
 }
 
 // Query is a generic struct that houses a query string and arguments used to construct a query

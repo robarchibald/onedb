@@ -1,6 +1,10 @@
 package onedb
 
-import "github.com/pkg/errors"
+import (
+	"io"
+
+	"github.com/pkg/errors"
+)
 
 // Backender is the db interface needed by onedb to enable QueryStruct and QueryJSON capability
 type Backender interface {
@@ -29,6 +33,7 @@ type DBer interface {
 	QueryJSONRow(query string, args ...interface{}) (string, error)
 	QueryStruct(result interface{}, query string, args ...interface{}) error
 	QueryStructRow(result interface{}, query string, args ...interface{}) error
+	QueryWriteCSV(w io.Writer, options CSVOptions, query string, args ...interface{}) error
 }
 
 var ErrRowsScannerInvalidData = errors.New("data must be a slice of structs")

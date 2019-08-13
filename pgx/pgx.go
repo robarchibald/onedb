@@ -1,6 +1,8 @@
 package pgx
 
 import (
+	"io"
+
 	"github.com/EndFirstCorp/onedb"
 	pgx "gopkg.in/jackc/pgx.v2"
 )
@@ -73,4 +75,8 @@ func (b *pgxBackend) QueryStruct(result interface{}, query string, args ...inter
 
 func (b *pgxBackend) QueryStructRow(result interface{}, query string, args ...interface{}) error {
 	return onedb.QueryStructRow(b, result, query, args...)
+}
+
+func (b *pgxBackend) QueryWriteCSV(w io.Writer, options onedb.CSVOptions, query string, args ...interface{}) error {
+	return onedb.QueryWriteCSV(w, options, b, query, args...)
 }
