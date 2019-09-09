@@ -427,6 +427,7 @@ func (q *mquery) Tail(timeout time.Duration) Iterator {
 type Iterator interface {
 	Err() error
 	Done() bool
+	Close() error
 	Next(result interface{}) bool
 	All(result interface{}) error
 }
