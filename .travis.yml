@@ -24,3 +24,6 @@ script:
 
 services:
   - mongodb
+
+env:
+  - GO111MODULE=on
