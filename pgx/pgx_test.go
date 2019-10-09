@@ -116,7 +116,7 @@ func TestPgxQueryValues(t *testing.T) {
 	if intVal != 1 || stringVal != "hello" {
 		t.Error("expected values to be set", intVal, stringVal)
 	}
-	verifyArgs(t, queries[0], "query", []interface{}{"arg1", "arg2"})
+	verifyArgs(t, queries[0], "query", "arg1", "arg2")
 }
 
 func TestPgxQueryJSON(t *testing.T) {
@@ -229,11 +229,11 @@ func TestPgxRowsScan(t *testing.T) {
 	m := newMockPgxRows()
 	r := &pgxRows{rows: m}
 	r.Scan()
-	if len(m.MethodsCalled["Scan"]) != 1 {
-		t.Error("expected Scan method to be called")
+	if len(m.MethodsCalled["Values"]) != 1 {
+		t.Error("expected Values method to be called")
 	}
 
-	m.ScanErr = errors.New("fail")
+	m.ValuesErr = errors.New("fail")
 	err := r.Scan()
 	if err == nil {
 		t.Error("expected error")

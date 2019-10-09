@@ -51,6 +51,7 @@ func (r *mockDb) Query(query string, args ...interface{}) (RowsScanner, error) {
 
 func (r *mockDb) QueryRow(query string, args ...interface{}) Scanner {
 	s, _ := r.nextScanner()
+	s.Next()
 	return s
 }
 
