@@ -21,3 +21,6 @@ script:
     if $fail; then
       $(exit 1);
     fi
+
+services:
+  - mongodb
