@@ -1,0 +1,6 @@
+github.com/EndFirstCorp/onedb v0.0.0-20190912160132-7f0f00a2da43 h1:9MlLTrZ3YF9fO4LtWBQbgpDvv0BH7w4hZoChYHOf+d4=
+github.com/EndFirstCorp/onedb v0.0.0-20190912160132-7f0f00a2da43/go.mod h1:gn9yNOE+zqRkXTxYV8ogHiHfpSel067Q1jdktwYD4VY=
+github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
+github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+gopkg.in/jackc/pgx.v2 v2.11.0 h1:2foAkMvvnmH6mDnl9DysePuo4oryPxgARLLzJXlHbZo=
+gopkg.in/jackc/pgx.v2 v2.11.0/go.mod h1:H0ffzffB0pY6/MIcz2MXEVOoZZuCJ5iDD9oUySf4W7w=
