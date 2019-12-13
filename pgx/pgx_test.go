@@ -338,3 +338,47 @@ type SimpleData struct {
 	IntVal    int
 	StringVal string
 }
+
+func Test_getTerms(t *testing.T) {
+	tests := []struct {
+		name  string
+		query string
+		want  []string
+	}{
+		{"single word", "query", []string{"query"}},
+		{"two words", "query search", []string{"query", "search"}},
+		{"no words", "", []string{}},
+		{"words needing to be trimmed", "  query search ", []string{"query", "search"}},
+		{"words with extra spaces", "  query       search ", []string{"query", "search"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getTerms(tt.query); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getTerms() = %v, want %v", len(got), len(tt.want))
+			}
+		})
+	}
+}
+
+func TestCreateFTS(t *testing.T) {
+	tests := []struct {
+		name          string
+		query         string
+		lenToWildcard int
+		want          string
+	}{
+		{"nothing", "", 3, ""},
+		{"short", "q", 3, "q"},
+		{"exact", "que", 3, "que:*"},
+		{"long word", "query", 3, "query:*"},
+		{"multiple words", "query search", 3, "query:* & search:*"},
+		{"multiple words with extra spaces", "   query     search  ", 3, "query:* & search:*"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CreateFTS(tt.query, tt.lenToWildcard); got != tt.want {
+				t.Errorf("CreateFTS() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

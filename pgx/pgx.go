@@ -2,6 +2,7 @@ package pgx
 
 import (
 	"io"
+	"strings"
 
 	"github.com/EndFirstCorp/onedb"
 	pgx "gopkg.in/jackc/pgx.v2"
@@ -39,6 +40,33 @@ func newPgx(connConfig *pgx.ConnConfig) (PGXer, error) {
 	}
 
 	return &pgxBackend{db: &pgxWithReconnect{db: pgxDb}}, nil
+}
+
+// CreateFTS creates a query optimized for full text search against a psql index
+func CreateFTS(query string, lenToWildcard int) string {
+	var fts strings.Builder
+	terms := getTerms(query)
+	for i, term := range terms {
+		fts.WriteString(term)
+		if len(term) >= lenToWildcard || len(terms) > 1 {
+			fts.WriteString(":*") // starts with filter
+		}
+		if len(terms) != i+1 {
+			fts.WriteString(" & ")
+		}
+	}
+	return fts.String()
+}
+
+func getTerms(query string) []string {
+	rawTerms := strings.Split(strings.Trim(query, " "), " ")
+	terms := []string{}
+	for i := 0; i < len(rawTerms); i++ {
+		if rawTerms[i] != "" {
+			terms = append(terms, rawTerms[i])
+		}
+	}
+	return terms
 }
 
 func (b *pgxBackend) Close() {
