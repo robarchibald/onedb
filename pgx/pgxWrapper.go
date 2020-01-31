@@ -5,8 +5,7 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/EndFirstCorp/onedb"
-	"github.com/6degreeshealth/onedb"
+	"github.com/EndFirstCorp/onedb"
 	"github.com/pkg/errors"
 	pgx "gopkg.in/jackc/pgx.v2"
 )

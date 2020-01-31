@@ -1,4 +1,4 @@
-module github.com/6degreeshealth/onedb/mgo
+module github.com/EndFirstCorp/onedb/mgo
 
 go 1.13
 

@@ -1,9 +1,9 @@
-module github.com/6degreeshealth/onedb/pgx
+module github.com/EndFirstCorp/onedb/pgx
 
 go 1.13
 
 require (
-	github.com/6degreeshealth/onedb v0.0.0-00010101000000-000000000000
+	github.com/EndFirstCorp/onedb v0.0.0-00010101000000-000000000000
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.6.0+incompatible // indirect
@@ -17,4 +17,4 @@ require (
 	gopkg.in/jackc/pgx.v2 v2.11.0
 )
 
-replace github.com/6degreeshealth/onedb => ../
+replace github.com/EndFirstCorp/onedb => ../

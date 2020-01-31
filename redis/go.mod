@@ -1,4 +1,4 @@
-module github.com/6degreeshealth/onedb/redis
+module github.com/EndFirstCorp/onedb/redis
 
 go 1.13
 
@@ -7,4 +7,4 @@ require (
 	github.com/garyburd/redigo v1.6.0
 )
 
-replace github.com/6degreeshealth/onedb => ../
+replace github.com/EndFirstCorp/onedb => ../
