@@ -48,6 +48,7 @@ func (b *pgxBackend) Begin() (Txer, error) {
 func (b *pgxBackend) Close() {
 	b.db.Close()
 }
+
 func (b *pgxBackend) Exec(query string, args ...interface{}) (CommandTag, error) {
 	return b.db.Exec(query, args...)
 }
