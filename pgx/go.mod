@@ -1,4 +1,4 @@
-module github.com/EndFirstCorp/onedb/pgx
+module github.com/6degreeshealth/onedb/pgx //github.com/EndFirstCorp/onedb/pgx
 
 go 1.13
 
@@ -17,4 +17,4 @@ require (
 	gopkg.in/jackc/pgx.v2 v2.11.0
 )
 
-replace github.com/EndFirstCorp/onedb => ../
+replace  github.com/EndFirstCorp/onedb => github.com/6degreeshealth/onedb

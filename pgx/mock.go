@@ -4,7 +4,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/EndFirstCorp/onedb"
+	// "github.com/EndFirstCorp/onedb"
+	"github.com/6degreeshealth/onedb"
 )
 
 type mockBackend struct {
