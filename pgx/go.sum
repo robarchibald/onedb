@@ -1,3 +1,5 @@
+github.com/EndFirstCorp/onedb v0.0.0-20190912160132-7f0f00a2da43 h1:9MlLTrZ3YF9fO4LtWBQbgpDvv0BH7w4hZoChYHOf+d4=
+github.com/EndFirstCorp/onedb v0.0.0-20190912160132-7f0f00a2da43/go.mod h1:gn9yNOE+zqRkXTxYV8ogHiHfpSel067Q1jdktwYD4VY=
 github.com/go-stack/stack v1.8.0 h1:5SgMzNM5HxrEjV0ww2lTmX6E2Izsfxas4+YHWRs3Lsk=
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
 github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 h1:vr3AYkKovP8uR8AvSGGUK1IDqRa5lAAvEkZG1LKaCRc=

@@ -13,7 +13,7 @@ import (
 type pgxWrapper interface {
 	Begin() (Txer, error)
 	Close()
-  querier
+	querier
 }
 
 type querier interface {
