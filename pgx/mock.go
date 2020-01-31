@@ -27,7 +27,6 @@ func NewMock(copyFromErr, execErr error, data ...interface{}) Mocker {
 	return &mockBackend{db: onedb.NewMock(copyFromErr, execErr, data...)}
 }
 
-func (b *mockBackend) Begin() {}
 func (b *mockBackend) Close() {}
 func (b *mockBackend) Exec(query string, args ...interface{}) (CommandTag, error) {
 	b.db.SaveMethodCall("Exec", append([]interface{}{query}, args...))
