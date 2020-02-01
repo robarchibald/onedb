@@ -11,7 +11,12 @@ import (
 )
 
 type pgxWrapper interface {
+	Begin() (Txer, error)
 	Close()
+	querier
+}
+
+type querier interface {
 	Exec(query string, args ...interface{}) (CommandTag, error)
 	Query(query string, args ...interface{}) (onedb.RowsScanner, error)
 	QueryRow(query string, args ...interface{}) onedb.Scanner
@@ -51,6 +56,14 @@ type pgxWithReconnect struct {
 	lastRetry  time.Time
 	retryCount int
 	pgxWrapper
+}
+
+func (b *pgxWithReconnect) Begin() (Txer, error) {
+	t, err := b.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	return &pgxTx{tx: t}, err
 }
 
 func (b *pgxWithReconnect) Close() {

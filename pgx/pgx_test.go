@@ -267,6 +267,10 @@ func newMockPgx(rows interface{}, row interface{}) *mockPgx {
 	return pgx
 }
 
+func (c *mockPgx) Begin() (Txer, error) {
+	c.MethodsCalled["Begin"] = append(c.MethodsCalled["Begin"], nil)
+	return &pgxTx{}, nil
+}
 func (c *mockPgx) Close() {
 	c.MethodsCalled["Close"] = append(c.MethodsCalled["Close"], nil)
 }
