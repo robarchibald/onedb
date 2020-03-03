@@ -238,7 +238,7 @@ type Collectioner interface {
 	UpsertId(id interface{}, update interface{}) (info *mgo.ChangeInfo, err error)
 	With(s *mgo.Session) Collectioner
 
-	MethodCalls() []methodCall
+	MethodCalls() []MethodCall
 }
 
 type mcollection struct {
@@ -314,7 +314,7 @@ func (c *mcollection) Repair() Iterator {
 func (c *mcollection) With(s *mgo.Session) Collectioner {
 	return &mcollection{c.c.With(s)}
 }
-func (c *mcollection) MethodCalls() []methodCall {
+func (c *mcollection) MethodCalls() []MethodCall {
 	return nil
 }
 

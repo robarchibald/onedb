@@ -119,7 +119,7 @@ func (d *fakeDatabase) AddUser(username, password string, readOnly bool) error {
 func (d *fakeDatabase) C(name string) Collectioner {
 	c, ok := d.collections[name]
 	if !ok {
-		c = &fakeCollection{q: []query{}, methodsCalled: []methodCall{}}
+		c = &fakeCollection{q: []query{}, methodsCalled: []MethodCall{}}
 		d.collections[name] = c
 	}
 	return c
@@ -143,18 +143,19 @@ func (d *fakeDatabase) Run(cmd interface{}, result interface{}) error { return n
 func (d *fakeDatabase) UpsertUser(user *mgo.User) error               { return nil }
 func (d *fakeDatabase) With(s *mgo.Session) Databaser                 { return d }
 
-type methodCall struct {
+// MethodCall saves the methods run and arguments for use in test verification
+type MethodCall struct {
 	Name string
 	Args []interface{}
 }
 
-func newMethodCall(name string, args ...interface{}) *methodCall {
-	return &methodCall{Name: name, Args: args}
+func newMethodCall(name string, args ...interface{}) *MethodCall {
+	return &MethodCall{Name: name, Args: args}
 }
 
 type fakeCollection struct {
 	q             []query
-	methodsCalled []methodCall
+	methodsCalled []MethodCall
 	Collectioner
 }
 
@@ -258,7 +259,7 @@ func (c *fakeCollection) With(s *mgo.Session) Collectioner {
 	c.methodsCalled = append(c.methodsCalled, *newMethodCall("With", s))
 	return c
 }
-func (c *fakeCollection) MethodCalls() []methodCall {
+func (c *fakeCollection) MethodCalls() []MethodCall {
 	return c.methodsCalled
 }
 
