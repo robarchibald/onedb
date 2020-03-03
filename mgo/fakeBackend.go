@@ -149,7 +149,8 @@ type MethodCall struct {
 	Args []interface{}
 }
 
-func newMethodCall(name string, args ...interface{}) *MethodCall {
+// NewMethodCall is the constructor for a mgo.MethodCall
+func NewMethodCall(name string, args ...interface{}) *MethodCall {
 	return &MethodCall{Name: name, Args: args}
 }
 
@@ -160,31 +161,31 @@ type fakeCollection struct {
 }
 
 func (c *fakeCollection) Count() (n int, err error) {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Count"))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("Count"))
 	return -1, nil
 }
 func (c *fakeCollection) Create(info *mgo.CollectionInfo) error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Create", info))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("Create", info))
 	return nil
 }
 func (c *fakeCollection) DropCollection() error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("DropCollection"))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("DropCollection"))
 	return nil
 }
 func (c *fakeCollection) DropIndex(key ...string) error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("DropIndex", key))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("DropIndex", key))
 	return nil
 }
 func (c *fakeCollection) DropIndexName(name string) error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("DropIndexName", name))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("DropIndexName", name))
 	return nil
 }
 func (c *fakeCollection) EnsureIndex(index mgo.Index) error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("EnsureIndex", index))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("EnsureIndex", index))
 	return nil
 }
 func (c *fakeCollection) EnsureIndexKey(key ...string) error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("EnsureIndexKey", key))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("EnsureIndexKey", key))
 	return nil
 }
 func (c *fakeCollection) find(query interface{}) Querier {
@@ -196,67 +197,67 @@ func (c *fakeCollection) find(query interface{}) Querier {
 	return &fakeQuery{}
 }
 func (c *fakeCollection) Find(query interface{}) Querier {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Find", query))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("Find", query))
 	return c.find(query)
 }
 func (c *fakeCollection) FindId(id interface{}) Querier {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("FindId", id))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("FindId", id))
 	return c.find(id)
 }
 func (c *fakeCollection) Insert(docs ...interface{}) error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Insert", docs))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("Insert", docs))
 	return nil
 }
 func (c *fakeCollection) Update(selector interface{}, update interface{}) error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Update", selector, update))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("Update", selector, update))
 	return nil
 }
 func (c *fakeCollection) UpdateId(id interface{}, update interface{}) error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("UpdateId", id, update))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("UpdateId", id, update))
 	return nil
 }
 func (c *fakeCollection) UpdateAll(selector interface{}, update interface{}) (info *mgo.ChangeInfo, err error) {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("UpdateAll", selector, update))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("UpdateAll", selector, update))
 	return nil, nil
 }
 func (c *fakeCollection) Upsert(selector interface{}, update interface{}) (info *mgo.ChangeInfo, err error) {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Upsert", selector, update))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("Upsert", selector, update))
 	return nil, nil
 }
 func (c *fakeCollection) UpsertId(id interface{}, update interface{}) (info *mgo.ChangeInfo, err error) {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("UpsertId", id, update))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("UpsertId", id, update))
 	return nil, nil
 }
 func (c *fakeCollection) Remove(selector interface{}) error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Remove", selector))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("Remove", selector))
 	return nil
 }
 func (c *fakeCollection) RemoveId(id interface{}) error {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("RemoveId", id))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("RemoveId", id))
 	return nil
 }
 func (c *fakeCollection) RemoveAll(selector interface{}) (info *mgo.ChangeInfo, err error) {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("RemoveAll", selector))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("RemoveAll", selector))
 	return nil, nil
 }
 func (c *fakeCollection) Indexes() (indexes []mgo.Index, err error) {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Indexes"))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("Indexes"))
 	return nil, nil
 }
 func (c *fakeCollection) NewIter(session *mgo.Session, firstBatch []bson.Raw, cursorId int64, err error) Iterator {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("NewIter", session, firstBatch, cursorId, err))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("NewIter", session, firstBatch, cursorId, err))
 	return nil
 }
 func (c *fakeCollection) Pipe(pipeline interface{}) *mgo.Pipe {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Pipe", pipeline))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("Pipe", pipeline))
 	return nil
 }
 func (c *fakeCollection) Repair() Iterator {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("Repair"))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("Repair"))
 	return nil
 }
 func (c *fakeCollection) With(s *mgo.Session) Collectioner {
-	c.methodsCalled = append(c.methodsCalled, *newMethodCall("With", s))
+	c.methodsCalled = append(c.methodsCalled, *NewMethodCall("With", s))
 	return c
 }
 func (c *fakeCollection) MethodCalls() []MethodCall {
