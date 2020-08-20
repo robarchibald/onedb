@@ -28,7 +28,7 @@ type query struct {
 }
 
 // NewFakeSession creates a fake mgo.Sessioner for mocking purposes
-func NewFakeSession(queryResults []FakeMongoQuery) (Sessioner, error) {
+func NewFakeSession(queryResults []FakeMongoQuery) Sessioner {
 	smap := make(sessionToDBMap)
 	for i := range queryResults {
 		r := queryResults[i]
@@ -36,7 +36,7 @@ func NewFakeSession(queryResults []FakeMongoQuery) (Sessioner, error) {
 		c := getCollection(d, r.Collection)
 		c.q = append(c.q, query{r.Query, r.Return})
 	}
-	return &fakeSession{data: smap}, nil
+	return &fakeSession{data: smap}
 }
 
 func getDatabase(smap sessionToDBMap, dbName string) *fakeDatabase {

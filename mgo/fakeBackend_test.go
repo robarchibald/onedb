@@ -10,7 +10,7 @@ import (
 func TestNewFakeSession(t *testing.T) {
 	q := interface{}(bson.M{"hello": "there"})
 	r := interface{}([]string{"1", "2", "3", "4", "5"})
-	fs, _ := NewFakeSession([]FakeMongoQuery{
+	fs := NewFakeSession([]FakeMongoQuery{
 		{DB: "db", Collection: "collection", Query: q, Return: r},
 	})
 	var item []string
@@ -23,7 +23,7 @@ func TestNewFakeSession(t *testing.T) {
 }
 
 func TestQueriesRun(t *testing.T) {
-	fs, _ := NewFakeSession(nil)
+	fs := NewFakeSession(nil)
 	c := fs.DB("db").C("collection")
 	c.Count()
 	c.Create(nil)

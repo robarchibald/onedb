@@ -27,9 +27,11 @@ func NewMock(copyFromErr, execErr error, data ...interface{}) Mocker {
 	return &mockBackend{db: onedb.NewMock(copyFromErr, execErr, data...)}
 }
 
-func (b *mockBackend) Close() {}
+func (b *mockBackend) Close() {
+	b.SaveMethodCall("Close", []interface{}{})
+}
 func (b *mockBackend) Exec(query string, args ...interface{}) (CommandTag, error) {
-	b.db.SaveMethodCall("Exec", append([]interface{}{query}, args...))
+	b.SaveMethodCall("Exec", append([]interface{}{query}, args...))
 	return "", b.ExecErr
 }
 func (b *mockBackend) Query(query string, args ...interface{}) (onedb.RowsScanner, error) {
@@ -39,7 +41,7 @@ func (b *mockBackend) QueryRow(query string, args ...interface{}) onedb.Scanner 
 	return b.db.QueryRow(query, args...)
 }
 func (b *mockBackend) CopyFrom(tableName Identifier, columnNames []string, rowSrc CopyFromSource) (int, error) {
-	b.db.SaveMethodCall("Exec", []interface{}{tableName, columnNames, rowSrc})
+	b.SaveMethodCall("CopyFrom", []interface{}{tableName, columnNames, rowSrc})
 	return 0, b.CopyFromErr
 }
 func (b *mockBackend) QueryValues(query *onedb.Query, result ...interface{}) error {

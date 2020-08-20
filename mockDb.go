@@ -46,10 +46,12 @@ func (r *mockDb) Backend() interface{} {
 }
 
 func (r *mockDb) Query(query string, args ...interface{}) (RowsScanner, error) {
+	r.SaveMethodCall("Query", append([]interface{}{query}, args...))
 	return r.nextScanner()
 }
 
 func (r *mockDb) QueryRow(query string, args ...interface{}) Scanner {
+	r.SaveMethodCall("QueryRow", append([]interface{}{query}, args...))
 	s, _ := r.nextScanner()
 	s.Next()
 	return s
@@ -76,14 +78,17 @@ func (r *mockDb) QueryStruct(result interface{}, query string, args ...interface
 }
 
 func (r *mockDb) QueryStructRow(result interface{}, query string, args ...interface{}) error {
+	r.SaveMethodCall("QueryStructRow", append([]interface{}{result, query}, args...))
 	return QueryStructRow(r, result, query, args...)
 }
 
 func (r *mockDb) QueryWriteCSV(w io.Writer, options CSVOptions, query string, args ...interface{}) error {
+	r.SaveMethodCall("QueryWriteCSV", append([]interface{}{w, options, query}, args...))
 	return QueryWriteCSV(w, options, r, query, args...)
 }
 
 func (r *mockDb) Close() error {
+	r.SaveMethodCall("Close", nil)
 	return r.closeErr
 }
 
@@ -106,9 +111,12 @@ func (r *mockDb) nextScanner() (RowsScanner, error) {
 	return NewRowsScanner(data), nil
 }
 
+// ErrNoMethods is an error for when no methods are left to verify.
+var ErrNoMethods = errors.New("No methods found to have been run")
+
 func (r *mockDb) VerifyNextCommand(t *testing.T, name string, expected ...interface{}) {
 	if len(r.methodsRun) == 0 {
-		t.Error("No methods found to have been run")
+		t.Error(ErrNoMethods)
 		return
 	}
 	current := r.methodsRun[0]
