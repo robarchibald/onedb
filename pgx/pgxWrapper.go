@@ -58,6 +58,31 @@ type pgxWithReconnect struct {
 	pgxWrapper
 }
 
+// PGX Errors, reexported for convenience. Documentation is copied as written.
+
+// ErrNoRows occurs when rows are expected but none are returned.
+var ErrNoRows = pgx.ErrNoRows
+
+// ErrNotificationTimeout occurs when WaitForNotification times out.
+var ErrNotificationTimeout = pgx.ErrNotificationTimeout
+
+// ErrDeadConn occurs on an attempt to use a dead connection
+var ErrDeadConn = pgx.ErrDeadConn
+
+// ErrTLSRefused occurs when the connection attempt requires TLS and the
+// PostgreSQL server refuses to use TLS
+var ErrTLSRefused = pgx.ErrTLSRefused
+
+// ErrConnBusy occurs when the connection is busy (for example, in the middle of
+// reading query results) and another action is attempts.
+var ErrConnBusy = pgx.ErrConnBusy
+
+// ErrInvalidLogLevel occurs on attempt to set an invalid log level.
+var ErrInvalidLogLevel = pgx.ErrInvalidLogLevel
+
+// ProtocolError occurs when unexpected data is received from PostgreSQL
+type ProtocolError pgx.ProtocolError
+
 func (b *pgxWithReconnect) Begin() (Txer, error) {
 	t, err := b.db.Begin()
 	if err != nil {
