@@ -36,6 +36,11 @@ type DBer interface {
 	QueryWriteCSV(w io.Writer, options CSVOptions, query string, args ...interface{}) error
 }
 
+// ErrRowsScannerInvalidData occurs when the provided data is not a slice of type struct.
 var ErrRowsScannerInvalidData = errors.New("data must be a slice of structs")
+
+// ErrRowScannerInvalidData occurs when the provided data is not a pointer to a struct.
 var ErrRowScannerInvalidData = errors.New("data must be a ptr to a struct")
+
+// ErrQueryIsNil occurs when the provided query is invalid.
 var ErrQueryIsNil = errors.New("invalid query")

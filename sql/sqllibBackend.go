@@ -5,6 +5,8 @@ import (
 	"io"
 
 	"github.com/EndFirstCorp/onedb"
+
+	// For importing the mssqldb and mysql driver.
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 )

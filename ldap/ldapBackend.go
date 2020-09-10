@@ -15,6 +15,7 @@ import (
 	ldap "gopkg.in/ldap.v2"
 )
 
+// LDAPer is the interface of an implementation of the Lightweight Directory Access Protocol (LDAP) protocol for generic directory services over the internet.
 type LDAPer interface {
 	Bind(username, password string) error
 	Query(query *ldap.SearchRequest) (*ldap.SearchResult, error)
@@ -54,17 +55,18 @@ type ldapBackender interface {
 	Start()
 	StartTLS(config *tls.Config) error
 	Bind(username, password string) error
-	//SimpleBind(simpleBindRequest *ldap.SimpleBindRequest) (*ldap.SimpleBindResult, error)
+	// SimpleBind(simpleBindRequest *ldap.SimpleBindRequest) (*ldap.SimpleBindResult, error)
 	Close()
 	Add(addRequest *ldap.AddRequest) error
 	Del(delRequest *ldap.DelRequest) error
 	Modify(modifyRequest *ldap.ModifyRequest) error
 	PasswordModify(passwordModifyRequest *ldap.PasswordModifyRequest) (*ldap.PasswordModifyResult, error)
 	Search(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error)
-	//	SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error)
+	// SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error)
 }
 
-func NewLdap(hostname string, port int, binddn string, password string) (LDAPer, error) {
+// NewLDAP creates a new Lightweight Directory Access Protocol (LDAP) for generic directory services over the internet.
+func NewLDAP(hostname string, port int, binddn string, password string) (LDAPer, error) {
 	l, err := ldapConnect(hostname, port, binddn, password)
 	if err != nil {
 		return nil, err
@@ -90,12 +92,12 @@ func ldapConnect(hostname string, port int, binddn string, password string) (lda
 	return l, nil
 }
 
-func (c *ldapBackend) Bind(username, password string) error {
-	return c.l.Bind(username, password)
+func (l *ldapBackend) Bind(username, password string) error {
+	return l.l.Bind(username, password)
 }
 
-func (c *ldapBackend) QueryJSON(query *ldap.SearchRequest) (string, error) {
-	res, err := c.Query(query)
+func (l *ldapBackend) QueryJSON(query *ldap.SearchRequest) (string, error) {
+	res, err := l.Query(query)
 	if err != nil {
 		return "", err
 	}
@@ -107,8 +109,8 @@ func (c *ldapBackend) QueryJSON(query *ldap.SearchRequest) (string, error) {
 	return string(data), nil
 }
 
-func (c *ldapBackend) QueryJSONRow(query *ldap.SearchRequest) (string, error) {
-	res, err := c.Query(query)
+func (l *ldapBackend) QueryJSONRow(query *ldap.SearchRequest) (string, error) {
+	res, err := l.Query(query)
 	if err != nil {
 		return "", err
 	}
@@ -126,13 +128,13 @@ type fieldInfo struct {
 	Kind  reflect.Kind
 }
 
-func (c *ldapBackend) QueryStruct(result interface{}, query *ldap.SearchRequest) error {
+func (l *ldapBackend) QueryStruct(result interface{}, query *ldap.SearchRequest) error {
 	resultType := reflect.TypeOf(result)
 	if result == nil || !onedb.IsPointer(resultType) || !onedb.IsSlice(resultType.Elem()) {
 		return errors.New("Invalid result argument.  Must be a pointer to a slice")
 	}
 
-	res, err := c.Query(query)
+	res, err := l.Query(query)
 	if err != nil {
 		return err
 	}
@@ -182,12 +184,12 @@ func setRowValue(row reflect.Value, field *fieldInfo, vals []string) error {
 	return nil
 }
 
-func (c *ldapBackend) QueryValues(query *ldap.SearchRequest, result ...interface{}) error {
+func (l *ldapBackend) QueryValues(query *ldap.SearchRequest, result ...interface{}) error {
 	if result == nil || !onedb.IsPointer(reflect.TypeOf(result)) || reflect.TypeOf(result).Elem().Kind() == reflect.Struct {
 		return errors.New("Invalid result argument.  Must be a pointer to a primitive type")
 	}
 
-	res, err := c.Query(query)
+	res, err := l.Query(query)
 	if err != nil {
 		return err
 	}
@@ -202,12 +204,12 @@ func (c *ldapBackend) QueryValues(query *ldap.SearchRequest, result ...interface
 	return nil
 }
 
-func (c *ldapBackend) QueryStructRow(result interface{}, query *ldap.SearchRequest) error {
+func (l *ldapBackend) QueryStructRow(result interface{}, query *ldap.SearchRequest) error {
 	if result == nil || !onedb.IsPointer(reflect.TypeOf(result)) {
 		return errors.New("Invalid result argument.  Must be a pointer to a struct")
 	}
 
-	res, err := c.Query(query)
+	res, err := l.Query(query)
 	if err != nil {
 		return err
 	}

@@ -102,7 +102,7 @@ func newMockSqllibBackend() *mockSqllibBackend {
 }
 
 func (c *mockSqllibBackend) SaveMethodCall(name string, arguments []interface{}) {
-	c.MethodsRun = append(c.MethodsRun, onedb.MethodsRun{name, arguments})
+	c.MethodsRun = append(c.MethodsRun, onedb.MethodsRun{MethodName: name, Arguments: arguments})
 }
 
 func (c *mockSqllibBackend) Ping() error {

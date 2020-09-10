@@ -327,7 +327,7 @@ func (r *mockPgxRows) Next() bool {
 }
 func (r *mockPgxRows) FieldDescriptions() []pgx.FieldDescription {
 	r.MethodsCalled["FieldDescriptions"] = append(r.MethodsCalled["FieldDescriptions"], nil)
-	return []pgx.FieldDescription{pgx.FieldDescription{Name: "F1"}, pgx.FieldDescription{Name: "F2"}}
+	return []pgx.FieldDescription{{Name: "F1"}, {Name: "F2"}}
 }
 func (r *mockPgxRows) Values() ([]interface{}, error) {
 	r.MethodsCalled["Values"] = append(r.MethodsCalled["Values"], nil)

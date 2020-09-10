@@ -9,14 +9,14 @@ import (
 
 func TestGetJson(t *testing.T) {
 	// success
-	rows := NewRowsScanner([]SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}})
+	rows := NewRowsScanner([]SimpleData{{1, "hello"}, {2, "world"}})
 	json, _ := getJSON(rows)
 	if json != `[{"IntVal":1,"StringVal":"hello"},{"IntVal":2,"StringVal":"world"}]` {
 		t.Error("expected valid json", json)
 	}
 
 	// scan error
-	rows = NewRowsScanner([]SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}})
+	rows = NewRowsScanner([]SimpleData{{1, "hello"}, {2, "world"}})
 	rows.(*mockRowsScanner).ScanErr = errors.New("fail")
 	_, err := getJSON(rows)
 	if err == nil {
@@ -33,14 +33,14 @@ func TestGetJson(t *testing.T) {
 
 func TestGetJsonRow(t *testing.T) {
 	// success
-	rows := NewRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows := NewRowsScanner([]SimpleData{{1, "hello"}})
 	json, _ := getJSONRow(rows)
 	if json != `{"IntVal":1,"StringVal":"hello"}` {
 		t.Error("expected valid json", json)
 	}
 
 	// scan error
-	rows = NewRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows = NewRowsScanner([]SimpleData{{1, "hello"}})
 	rows.(*mockRowsScanner).ScanErr = errors.New("fail")
 	_, err := getJSONRow(rows)
 	if err == nil {
@@ -71,14 +71,14 @@ func TestGetColumnNamesAndValues(t *testing.T) {
 	}
 
 	// json columns
-	rows = NewRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows = NewRowsScanner([]SimpleData{{1, "hello"}})
 	cols, vals, _ := getColumnNamesAndValues(rows, true)
 	if len(cols) != 2 || cols[0] != `"IntVal":` || cols[1] != `"StringVal":` || len(vals) != 2 {
 		t.Error("expected valid column names and values array", cols, vals)
 	}
 
 	// non-json columns
-	rows = NewRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows = NewRowsScanner([]SimpleData{{1, "hello"}})
 	cols, vals, _ = getColumnNamesAndValues(rows, false)
 	if len(cols) != 2 || cols[0] != "IntVal" || cols[1] != "StringVal" || len(vals) != 2 {
 		t.Error("expected valid column names and values array", cols, vals)

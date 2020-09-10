@@ -6,7 +6,7 @@ import (
 )
 
 func TestMockDBQueryJson(t *testing.T) {
-	d := NewMock(nil, nil, "hello", []SimpleData{SimpleData{1, "hello"}})
+	d := NewMock(nil, nil, "hello", []SimpleData{{1, "hello"}})
 	json, err := d.QueryJSON("select query")
 	if err == nil {
 		t.Error("expected error due to invalid argument", err)
@@ -44,8 +44,8 @@ func TestMockDBQueryStruct(t *testing.T) {
 		t.Error("expected error for wrong result type")
 	}
 
-	q1 := []SimpleData{SimpleData{1, "hello"}, SimpleData{2, "world"}}
-	q2 := []SimpleData{SimpleData{3, "test"}}
+	q1 := []SimpleData{{1, "hello"}, {2, "world"}}
+	q2 := []SimpleData{{3, "test"}}
 	d = NewMock(nil, nil, q1, q2)
 	err = d.QueryStruct(&result, "select query")
 	if err != nil || len(result) != 2 || result[0].IntVal != 1 || result[0].StringVal != "hello" || result[1].IntVal != 2 || result[1].StringVal != "world" {
