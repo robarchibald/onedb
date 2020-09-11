@@ -1,23 +1,13 @@
 package pgx
 
+import "gopkg.in/jackc/pgx.v2"
+
 // Identifier a PostgreSQL identifier or name. Identifiers can be composed of
 // multiple parts such as ["schema", "table"] or ["table", "column"].
-type Identifier []string
+type Identifier pgx.Identifier
 
 // CopyFromSource is the interface used by *Conn.CopyFrom as the source for copy data.
-type CopyFromSource interface {
-	// Next returns true if there is another row and makes the next row data
-	// available to Values(). When there are no more rows available or an error
-	// has occurred it returns false.
-	Next() bool
-
-	// Values returns the values for the current row.
-	Values() ([]interface{}, error)
-
-	// Err returns any error that has been encountered by the CopyFromSource. If
-	// this is not nil *Conn.CopyFrom will abort the copy.
-	Err() error
-}
+type CopyFromSource pgx.CopyFromSource
 
 // CopyFromRows returns a CopyFromSource interface over the provided rows slice
 // making it usable by *Conn.CopyFrom.
@@ -26,7 +16,7 @@ func CopyFromRows(rows [][]interface{}) CopyFromSource {
 }
 
 // CommandTag is the result of an Exec function
-type CommandTag string
+type CommandTag pgx.CommandTag
 
 type copyFromRows struct {
 	rows [][]interface{}

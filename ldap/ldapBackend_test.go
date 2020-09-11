@@ -13,26 +13,26 @@ import (
 func TestNewLdap(t *testing.T) {
 	dialTCPFunc = onedb.NewMockDialer(nil)
 	newConnFunc = newMockLDAPCreator(nil, nil)
-	_, err := NewLdap("localhost", 389, "user", "password")
+	_, err := NewLDAP("localhost", 389, "user", "password")
 	if err != nil {
 		t.Error("expected success", err)
 	}
 
 	dialTCPFunc = onedb.NewMockDialer(errors.New("fail"))
-	_, err = NewLdap("localhost", 389, "user", "password")
+	_, err = NewLDAP("localhost", 389, "user", "password")
 	if err == nil {
 		t.Error("expected fail")
 	}
 
 	dialTCPFunc = onedb.NewMockDialer(nil)
 	newConnFunc = newMockLDAPCreator(errors.New("fail"), nil)
-	_, err = NewLdap("localhost", 389, "user", "password")
+	_, err = NewLDAP("localhost", 389, "user", "password")
 	if err == nil {
 		t.Error("expected fail on StartTLS")
 	}
 
 	newConnFunc = newMockLDAPCreator(nil, errors.New("fail"))
-	_, err = NewLdap("localhost", 389, "user", "password")
+	_, err = NewLDAP("localhost", 389, "user", "password")
 	if err == nil {
 		t.Error("Expected Bind error")
 	}
@@ -44,7 +44,7 @@ func TestNewLdapDBRealConnection(t *testing.T) {
 	}
 	dialTCPFunc = onedb.DialTCP
 	newConnFunc = (&ldapRealCreator{}).NewConn
-	_, err := NewLdap("localhost", 389, "user", "password")
+	_, err := NewLDAP("localhost", 389, "user", "password")
 	if err != nil {
 		t.Error("expected connection success", err)
 	}
@@ -85,7 +85,7 @@ func TestLdapQuery(t *testing.T) {
 	}
 
 	m.SearchErr = nil
-	entries := []*ldap.Entry{&ldap.Entry{DN: "item1"}, &ldap.Entry{DN: "item2"}}
+	entries := []*ldap.Entry{{DN: "item1"}, {DN: "item2"}}
 	m.SearchReturn = &ldap.SearchResult{Entries: entries}
 	s, err := l.Query(r)
 	if rows := s.Entries; len(rows) != len(entries) || rows[0].DN != "item1" || rows[1].DN != "item2" {
@@ -102,7 +102,7 @@ func TestLdapQueryStruct(t *testing.T) {
 	m := newMockLdap()
 	a1 := ldap.EntryAttribute{Name: "Test", Values: []string{"1", "2"}}
 	a2 := ldap.EntryAttribute{Name: "Test2", Values: []string{"3", "4"}}
-	entries := []*ldap.Entry{&ldap.Entry{DN: "item1", Attributes: []*ldap.EntryAttribute{&a1, &a2}}, &ldap.Entry{DN: "item2", Attributes: []*ldap.EntryAttribute{&a2, &a1}}}
+	entries := []*ldap.Entry{{DN: "item1", Attributes: []*ldap.EntryAttribute{&a1, &a2}}, {DN: "item2", Attributes: []*ldap.EntryAttribute{&a2, &a1}}}
 	m.SearchReturn = &ldap.SearchResult{Entries: entries}
 	l := &ldapBackend{l: m}
 	r := ldap.NewSearchRequest("baseDn", ldap.ScopeSingleLevel, ldap.NeverDerefAliases, 0, 0, false, "filter", []string{"attributes"}, nil)
@@ -218,9 +218,9 @@ func TestLdapRowsColumns(t *testing.T) {
 
 /***************************** MOCKS ****************************/
 type mockLdapData struct {
-	Uid           string
+	UID           string
 	UserPassword  string
-	UidNumber     string
+	UIDNumber     string
 	GidNumber     string
 	HomeDirectory string
 }

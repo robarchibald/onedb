@@ -6,7 +6,7 @@ import (
 )
 
 func TestQueryJson(t *testing.T) {
-	rows := NewRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows := NewRowsScanner([]SimpleData{{1, "hello"}})
 	db := &mockBackend{Rows: rows}
 
 	json, err := QueryJSON(db, "select * from TestTable")
@@ -25,7 +25,7 @@ func TestQueryJson(t *testing.T) {
 }
 
 func TestQueryJsonRow(t *testing.T) {
-	rows := NewRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows := NewRowsScanner([]SimpleData{{1, "hello"}})
 	db := &mockBackend{Rows: rows}
 
 	json, err := QueryJSONRow(db, "select * from TestTable")
@@ -44,7 +44,7 @@ func TestQueryJsonRow(t *testing.T) {
 }
 
 func TestQueryStruct(t *testing.T) {
-	rows := NewRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows := NewRowsScanner([]SimpleData{{1, "hello"}})
 	db := &mockBackend{Rows: rows}
 	data := []SimpleData{}
 
@@ -69,7 +69,7 @@ func TestQueryStruct(t *testing.T) {
 }
 
 func TestQueryStructRow(t *testing.T) {
-	rows := NewRowsScanner([]SimpleData{SimpleData{1, "hello"}})
+	rows := NewRowsScanner([]SimpleData{{1, "hello"}})
 	db := &mockBackend{Rows: rows}
 	data := SimpleData{}
 
