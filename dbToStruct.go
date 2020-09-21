@@ -1,6 +1,7 @@
 package onedb
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -64,9 +65,9 @@ var nilType = reflect.TypeOf(nil)
 var nilValue = reflect.ValueOf(nil)
 
 // SetValue is used to update struct values from the database
-func SetValue(dest reflect.Value, src *interface{}) {
+func SetValue(dest reflect.Value, src *interface{}) error {
 	if !dest.CanSet() {
-		return
+		return fmt.Errorf("not settable")
 	}
 	destType := dest.Type()
 	destKind := destType.Kind()
@@ -177,10 +178,11 @@ func SetValue(dest reflect.Value, src *interface{}) {
 		}
 	default:
 		if destType != reflect.TypeOf(*src) {
-			return
+			return fmt.Errorf("Incompatible types")
 		}
 		dest.Set(reflect.ValueOf(v))
 	}
+	return nil
 }
 
 func getRootValue(value reflect.Value) reflect.Value {
