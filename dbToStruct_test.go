@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+type SimpleItem struct {
+	Str string
+}
+
 type TestItem struct {
 	Str   string
 	Date  time.Time
@@ -40,6 +44,8 @@ type TestStruct struct {
 	TimePtr     *time.Time
 	Time        time.Time
 	notsettable int
+	StructVal   SimpleItem
+	StructPtr   *SimpleItem
 }
 
 func TestGetStruct(t *testing.T) {
@@ -136,6 +142,8 @@ func TestSetValue(t *testing.T) {
 	setValueRunner("String", "hello", t)
 	setValueRunner("Time", time.Date(2000, 01, 01, 12, 0, 0, 0, time.Local), t)
 	setValueRunner("StrSlice", []string{"hello", "there"}, t)
+	setValueRunner("StructVal", SimpleItem{Str: "str"}, t)
+	setValueRunner("StructPtr", &SimpleItem{Str: "str"}, t)
 	setValueRunner("StrPtr", "hello", t)
 	setValueRunner("StrPtr", &v, t)
 	setValueExpectEmpty("StrPtr", &i, t)
@@ -150,7 +158,7 @@ func TestSetValueEdgeCases(t *testing.T) {
 	f := reflect.ValueOf(test).Elem().FieldByName("Time")
 	v := new(interface{})
 	*v = "hello"
-	setValue(f, v)
+	SetValue(f, v)
 	r := time.Time{}
 	if test.Time != r {
 		t.Error("expected unitialized time struct since we can't set it to a string")
@@ -158,7 +166,7 @@ func TestSetValueEdgeCases(t *testing.T) {
 
 	f = reflect.ValueOf(test).Elem().FieldByName("notsettable")
 	*v = 123
-	setValue(f, v)
+	SetValue(f, v)
 	if test.notsettable != 0 {
 		t.Error("expected to be unable to set value")
 	}
@@ -169,7 +177,7 @@ func setValueRunner(fieldName string, value interface{}, t *testing.T) {
 	dest := reflect.ValueOf(test).Elem().FieldByName(fieldName)
 	iface := new(interface{})
 	*iface = value
-	setValue(dest, iface)
+	SetValue(dest, iface)
 	if dest.Kind() == reflect.Slice {
 		v := fmt.Sprintf("%v", value)
 		if fv := fmt.Sprintf("%v", dest.Interface()); fv != v {
@@ -202,7 +210,7 @@ func setValueExpectEmpty(fieldName string, value interface{}, t *testing.T) {
 	dest := reflect.ValueOf(test).Elem().FieldByName(fieldName)
 	iface := new(interface{})
 	*iface = value
-	setValue(dest, iface)
+	SetValue(dest, iface)
 
 	zeroValue := reflect.New(dest.Type()).Elem().Interface()
 	if dest.Interface() != zeroValue {

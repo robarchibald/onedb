@@ -54,27 +54,27 @@ func scanStruct(s Scanner, vals []interface{}, dbToStruct []structFieldInfo, res
 	}
 	item := reflect.ValueOf(result).Elem()
 	for _, fieldInfo := range dbToStruct {
-		setValue(item.Field(fieldInfo.FieldIndex), vals[fieldInfo.DBIndex].(*interface{}))
+		SetValue(item.Field(fieldInfo.FieldIndex), vals[fieldInfo.DBIndex].(*interface{}))
 	}
 	return nil
 }
 
-var timeKind = reflect.TypeOf(time.Time{}).Kind()
+var timeType = reflect.TypeOf(time.Time{})
 var nilType = reflect.TypeOf(nil)
 var nilValue = reflect.ValueOf(nil)
 
-// I have some values coming from the database that are nullable, and hence pointers to: bool, int16, string and time
-// Unfortunately, I haven't figured out a better way to make it work than the lame if statement. Hopefully can replace
-// with something better whenever I run across more nullable values to set.
-func setValue(dest reflect.Value, src *interface{}) {
+// SetValue is used to update struct values from the database
+func SetValue(dest reflect.Value, src *interface{}) {
 	if !dest.CanSet() {
 		return
 	}
 	destType := dest.Type()
 	destKind := destType.Kind()
+	destRootType := destType
 	destRootKind := destKind
 	if destKind == reflect.Ptr {
-		destRootKind = destType.Elem().Kind()
+		destRootType = destType.Elem()
+		destRootKind = destRootType.Kind()
 	}
 
 	switch v := (*src).(type) {
@@ -170,9 +170,9 @@ func setValue(dest reflect.Value, src *interface{}) {
 			dest.Set(reflect.ValueOf(&v))
 		}
 	case time.Time:
-		if destKind == timeKind {
+		if destType == timeType {
 			dest.Set(reflect.ValueOf(v))
-		} else if destKind == reflect.Ptr && destRootKind == timeKind {
+		} else if destKind == reflect.Ptr && destRootType == timeType {
 			dest.Set(reflect.ValueOf(&v))
 		}
 	default:
