@@ -93,11 +93,15 @@ func SetValue(dest reflect.Value, src *interface{}) error {
 			dest.Set(reflect.ValueOf(&v))
 		}
 	case *float32:
-		setFloat(destKind, destRootKind, dest, float64(*v))
+		if v != nil {
+			setFloat(destKind, destRootKind, dest, float64(*v))
+		}
 	case float32:
 		setFloat(destKind, destRootKind, dest, float64(v))
 	case *float64:
-		setFloat(destKind, destRootKind, dest, *v)
+		if v != nil {
+			setFloat(destKind, destRootKind, dest, *v)
+		}
 	case float64:
 		setFloat(destKind, destRootKind, dest, v)
 	case int8:
