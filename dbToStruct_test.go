@@ -126,6 +126,8 @@ func TestSetValue(t *testing.T) {
 	setValueRunner("BoolVal", true, t)
 	setValueRunner("ByteVal", []byte("byte"), t)
 	setValueRunner("Float32", float32(123.4567899), t)
+	setValueRunner("Float32", float64(123.4567899), t)
+	setValueRunner("Float64", float32(123.4567899), t)
 	setValueRunner("Float64", float64(123.4567899), t)
 	setValueRunner("Int", int(123), t)
 	setValueExpectEmpty("Int", &i, t) // don't allow setting nullable value to non nullable destination
