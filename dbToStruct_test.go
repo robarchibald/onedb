@@ -3,6 +3,7 @@ package onedb
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"testing"
 	"time"
@@ -37,6 +38,8 @@ type TestStruct struct {
 	Uint32      uint32
 	Uint64      uint64
 	String      string
+	Float32Ptr  *float32
+	Float64Ptr  *float64
 	StrSlice    []string
 	StrPtr      *string
 	BoolPtr     *bool
@@ -123,12 +126,18 @@ func TestStructRow(t *testing.T) {
 func TestSetValue(t *testing.T) {
 	v := "hello"
 	i := 0
+	f32 := float32(123.4567899)
+	f64 := float64(123.4567899)
 	setValueRunner("BoolVal", true, t)
 	setValueRunner("ByteVal", []byte("byte"), t)
 	setValueRunner("Float32", float32(123.4567899), t)
 	setValueRunner("Float32", float64(123.4567899), t)
 	setValueRunner("Float64", float32(123.4567899), t)
 	setValueRunner("Float64", float64(123.4567899), t)
+	setValueRunner("Float32Ptr", &f32, t)
+	setValueRunner("Float32Ptr", &f64, t)
+	setValueRunner("Float64Ptr", &f32, t)
+	setValueRunner("Float64Ptr", &f64, t)
 	setValueRunner("Int", int(123), t)
 	setValueExpectEmpty("Int", &i, t) // don't allow setting nullable value to non nullable destination
 	setValueRunner("Int", int8(123), t)
@@ -190,8 +199,10 @@ func setValueRunner(fieldName string, value interface{}, t *testing.T) {
 		if v.Kind() == reflect.Ptr {
 			if dest.Elem() == reflect.ValueOf(nil) {
 				t.Errorf("expected %s to be set to %v. Actual: nil", fieldName, v.Elem().Interface())
+			} else if f64 := getFloat(value); f64 > 0 {
+				compareFloats(t, dest.Elem(), f64)
 			} else if dest.Elem().Interface() != v.Elem().Interface() {
-				t.Errorf("expected %s to be set to %v. Actual: %s", fieldName, v.Elem().Interface(), dest.Elem().Interface())
+				t.Errorf("expected %s to be set to %v. Actual: %v", fieldName, v.Elem().Interface(), dest.Elem().Interface())
 			}
 		} else {
 			if dest.Elem() == reflect.ValueOf(nil) {
@@ -201,9 +212,46 @@ func setValueRunner(fieldName string, value interface{}, t *testing.T) {
 			}
 		}
 	} else {
-		if fmt.Sprintf("%v", dest.Interface()) != fmt.Sprintf("%v", value) {
+		if f64 := getFloat(value); f64 > 0 {
+			compareFloats(t, dest, f64)
+		} else if fmt.Sprintf("%v", dest.Interface()) != fmt.Sprintf("%v", value) {
 			t.Errorf("expected %s to be set to %v. Actual: %v", fieldName, value, dest.Interface())
 		}
+	}
+}
+
+func getFloat(value interface{}) float64 {
+	switch v := value.(type) {
+	case float32:
+		return float64(v)
+	case *float32:
+		return float64(*v)
+	case float64:
+		return v
+	case *float64:
+		return *v
+	default:
+		return 0
+	}
+}
+
+func compareFloats(t *testing.T, v reflect.Value, f float64) {
+	k := v.Kind()
+	if k == reflect.Float32 || k == reflect.Float64 {
+		if f1 := getFloat64(v); math.Abs(f1-f) > 0.0009 {
+			t.Errorf("expected floats to be closer in value, %v, %v", f1, f)
+		}
+	}
+}
+
+func getFloat64(v reflect.Value) float64 {
+	switch v.Kind() {
+	case reflect.Float32:
+		return float64(v.Interface().(float32))
+	case reflect.Float64:
+		return v.Interface().(float64)
+	default:
+		return float64(0)
 	}
 }
 

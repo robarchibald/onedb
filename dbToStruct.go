@@ -92,10 +92,14 @@ func SetValue(dest reflect.Value, src *interface{}) error {
 		} else if destKind == reflect.Ptr && (destRootKind == reflect.Slice && destType.Elem().Elem().Kind() == reflect.Uint8) {
 			dest.Set(reflect.ValueOf(&v))
 		}
+	case *float32:
+		setFloat(destKind, destRootKind, dest, float64(*v))
 	case float32:
 		setFloat(destKind, destRootKind, dest, float64(v))
+	case *float64:
+		setFloat(destKind, destRootKind, dest, *v)
 	case float64:
-		setFloat(destKind, destRootKind, dest, float64(v))
+		setFloat(destKind, destRootKind, dest, v)
 	case int8:
 		if destKind == reflect.Int8 || destKind == reflect.Int16 || destKind == reflect.Int32 || destKind == reflect.Int64 || destKind == reflect.Int {
 			dest.SetInt(int64(v))
@@ -180,25 +184,14 @@ func SetValue(dest reflect.Value, src *interface{}) error {
 func setFloat(destKind, destRootKind reflect.Kind, dest reflect.Value, v float64) {
 	if destKind == reflect.Float32 || destKind == reflect.Float64 {
 		dest.SetFloat(v)
-	} else if destKind == reflect.Ptr && (destRootKind == reflect.Float32 || destRootKind == reflect.Float64) {
-		f64 := v
-		dest.Set(reflect.ValueOf(&f64))
-	}
-}
-
-func setInt(destKind, destRootKind reflect.Kind, dest reflect.Value, v int64) {
-	if destKind == reflect.Int8 || destKind == reflect.Int16 || destKind == reflect.Int32 || destKind == reflect.Int64 || destKind == reflect.Int {
-		dest.SetInt(v)
-	} else if destKind == reflect.Ptr && (destRootKind == reflect.Int8 || destRootKind == reflect.Int16 || destRootKind == reflect.Int32 || destRootKind == reflect.Int64 || destRootKind == reflect.Int) {
-		dest.Set(reflect.ValueOf(&v))
-	}
-}
-
-func setUint(destKind, destRootKind reflect.Kind, dest reflect.Value, v uint64) {
-	if destKind == reflect.Uint8 || destKind == reflect.Uint16 || destKind == reflect.Uint32 || destKind == reflect.Uint64 || destKind == reflect.Uint {
-		dest.SetUint(v)
-	} else if destKind == reflect.Ptr && (destRootKind == reflect.Uint8 || destRootKind == reflect.Uint16 || destRootKind == reflect.Uint32 || destRootKind == reflect.Uint64 || destRootKind == reflect.Uint) {
-		dest.Set(reflect.ValueOf(&v))
+	} else if destKind == reflect.Ptr {
+		if destRootKind == reflect.Float32 {
+			f32 := float32(v)
+			dest.Set(reflect.ValueOf(&f32))
+		} else if destRootKind == reflect.Float64 {
+			f64 := float64(v)
+			dest.Set(reflect.ValueOf(&f64))
+		}
 	}
 }
 
