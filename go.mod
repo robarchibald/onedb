@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/cockroachdb/apd v1.1.0 // indirect
+	github.com/confluentinc/confluent-kafka-go v1.5.2 // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20200131184339-0f454e2ecd6a
 	github.com/garyburd/redigo v1.6.0
 	github.com/go-sql-driver/mysql v1.5.0
@@ -19,6 +20,7 @@ require (
 	golang.org/x/text v0.3.3 // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
+	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.5.2
 	gopkg.in/inconshreveable/log15.v2 v2.0.0-20200109203555-b30bc20e4fd1 // indirect
 	gopkg.in/jackc/pgx.v2 v2.11.0
 	gopkg.in/ldap.v2 v2.5.1
